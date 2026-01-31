@@ -8,22 +8,60 @@ import (
 )
 
 func ExtractEchoTxt(s string) string {
+	if len(s) <= 5 {
+		return ""
+	}
 	return s[5:]
 }
 
 func ExtractTypeTxt(s string) string {
+	if len(s) <= 5 {
+		return ""
+	}
 	return s[5:]
 }
 
 func CommandRecog(c string) string {
 	if c == "exit" {
 		return "exit"
-	} else if c[:4] == "echo" {
+	} else if len(c) >= 4 && c[:4] == "echo" {
 		return "echo"
-	} else if c[:4] == "type" {
+	} else if len(c) >= 4 && c[:4] == "type" {
 		return "type"
 	}
 	return "not found"
+}
+
+func isExecAny(mode os.FileMode) bool {
+	// The 0111 octal bitmask checks the execute bits for owner, group, and others.
+	return mode&0111 != 0
+}
+
+func CheckExeExistance(filename string) string {
+	path := os.Getenv("PATH")
+	dirs := strings.Split(path, ":")
+
+	for _, dir := range dirs {
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, file := range files {
+			if file.Name() == filename {
+				fullPath := dir + "/" + filename
+				fileInfo, err := os.Stat(fullPath) // Replace "myprogram" with the file path
+				if err != nil {
+					break
+				}
+				if isExecAny(fileInfo.Mode().Perm()) {
+					return fullPath
+				} else {
+					break
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func main() {
@@ -49,7 +87,13 @@ func main() {
 			case "exit", "echo", "type":
 				fmt.Println(innerCom, "is a shell builtin")
 			default:
-				fmt.Println(innerCom + ": not found")
+				exePath := CheckExeExistance(innerCom)
+
+				if len(exePath) > 0 {
+					fmt.Println(innerCom + " is " + exePath)
+				} else {
+					fmt.Println(innerCom + ": not found")
+				}
 			}
 		default:
 			fmt.Println(text + ": command not found")
