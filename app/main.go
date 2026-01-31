@@ -7,10 +7,11 @@ import (
 	"strings"
 )
 
-// Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
-var _ = fmt.Print
-
 func ExtractEchoTxt(s string) string {
+	return s[5:]
+}
+
+func ExtractTypeTxt(s string) string {
 	return s[5:]
 }
 
@@ -19,6 +20,8 @@ func CommandRecog(c string) string {
 		return "exit"
 	} else if c[:4] == "echo" {
 		return "echo"
+	} else if c[:4] == "type" {
+		return "type"
 	}
 	return "not found"
 }
@@ -40,6 +43,14 @@ func main() {
 			os.Exit(0)
 		case "echo":
 			fmt.Println(ExtractEchoTxt(text))
+		case "type":
+			innerCom := text[5:]
+			switch CommandRecog(innerCom) {
+			case "exit", "echo", "type":
+				fmt.Println(innerCom, "is a shell builtin")
+			default:
+				fmt.Println(innerCom + ": not found")
+			}
 		default:
 			fmt.Println(text + ": command not found")
 		}
