@@ -2,10 +2,17 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
+
+func isExecAny(mode os.FileMode) bool {
+	// The 0111 octal bitmask checks the execute bits for owner, group, and others.
+	return mode&0111 != 0
+}
 
 func ExtractEchoTxt(s string) string {
 	if len(s) <= 5 {
@@ -30,11 +37,6 @@ func CommandRecog(c string) string {
 		return "type"
 	}
 	return "not found"
-}
-
-func isExecAny(mode os.FileMode) bool {
-	// The 0111 octal bitmask checks the execute bits for owner, group, and others.
-	return mode&0111 != 0
 }
 
 func CheckExeExistance(filename string) string {
@@ -62,6 +64,17 @@ func CheckExeExistance(filename string) string {
 		}
 	}
 	return ""
+}
+
+func ExecuteExe(filename string, args []string, nArgs int) (string, string, error) {
+	cmd := exec.Command(filename, args...)
+	var stdoutbuf, stderrbuf bytes.Buffer
+	cmd.Stdout = &stdoutbuf
+	cmd.Stderr = &stderrbuf
+	if err := cmd.Run(); err != nil {
+		return "", "", err
+	}
+	return stdoutbuf.String(), stderrbuf.String(), nil
 }
 
 func main() {
@@ -96,7 +109,15 @@ func main() {
 				}
 			}
 		default:
-			fmt.Println(text + ": command not found")
+			comParts := strings.Split(text, " ")
+			exePath := CheckExeExistance(comParts[0])
+			if len(exePath) > 0 {
+				logs, _, _ := ExecuteExe(comParts[0], comParts[1:], len(comParts)-1)
+				fmt.Print(logs)
+				// fmt.Println("stderr:", b)
+			} else {
+				fmt.Println(text + ": command not found")
+			}
 		}
 	}
 }
