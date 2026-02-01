@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -14,29 +14,31 @@ func isExecAny(mode os.FileMode) bool {
 	return mode&0111 != 0
 }
 
-func ExtractEchoTxt(s string) string {
-	if len(s) <= 5 {
-		return ""
-	}
-	return s[5:]
+func ExtractEchoTxt(t string) string {
+	echoTxt := strings.SplitN(t, " ", 2)[1]
+	return echoTxt
 }
 
-func ExtractTypeTxt(s string) string {
-	if len(s) <= 5 {
-		return ""
-	}
-	return s[5:]
+func ExtractTypeTxt(t string) string {
+	typeTxt := strings.SplitN(t, " ", 2)[1]
+	return typeTxt
 }
 
-func CommandRecog(c string) string {
-	if c == "exit" {
+func CommandRecog(t string) string {
+	com := strings.Split(t, " ")[0]
+
+	switch com {
+	case "exit":
 		return "exit"
-	} else if len(c) >= 4 && c[:4] == "echo" {
+	case "echo":
 		return "echo"
-	} else if len(c) >= 4 && c[:4] == "type" {
+	case "type":
 		return "type"
+	case "pwd":
+		return "pwd"
+	default:
+		return "not builtin"
 	}
-	return "not found"
 }
 
 func CheckExeExistance(filename string) string {
@@ -66,15 +68,27 @@ func CheckExeExistance(filename string) string {
 	return ""
 }
 
-func ExecuteExe(filename string, args []string, nArgs int) (string, string, error) {
-	cmd := exec.Command(filename, args...)
-	var stdoutbuf, stderrbuf bytes.Buffer
-	cmd.Stdout = &stdoutbuf
-	cmd.Stderr = &stderrbuf
-	if err := cmd.Run(); err != nil {
-		return "", "", err
+func ExecuteExe(filename string, args []string) error {
+	process := exec.Command(filename, args...)
+	stdout, err := process.StdoutPipe()
+	if err != nil {
+		return err
 	}
-	return stdoutbuf.String(), stderrbuf.String(), nil
+	if err := process.Start(); err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		// Process the line immediately as it arrives
+		fmt.Println(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	if err := process.Wait(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
@@ -95,9 +109,9 @@ func main() {
 		case "echo":
 			fmt.Println(ExtractEchoTxt(text))
 		case "type":
-			innerCom := text[5:]
+			innerCom := strings.SplitN(text, " ", 2)[1]
 			switch CommandRecog(innerCom) {
-			case "exit", "echo", "type":
+			case "exit", "echo", "type", "pwd":
 				fmt.Println(innerCom, "is a shell builtin")
 			default:
 				exePath := CheckExeExistance(innerCom)
@@ -108,13 +122,20 @@ func main() {
 					fmt.Println(innerCom + ": not found")
 				}
 			}
+		case "pwd":
+			dir, err := os.Getwd()
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(dir)
 		default:
 			comParts := strings.Split(text, " ")
 			exePath := CheckExeExistance(comParts[0])
 			if len(exePath) > 0 {
-				logs, _, _ := ExecuteExe(comParts[0], comParts[1:], len(comParts)-1)
-				fmt.Print(logs)
-				// fmt.Println("stderr:", b)
+				err := ExecuteExe(comParts[0], comParts[1:])
+				if err != nil {
+					log.Fatal("Execution Failed:", err)
+				}
 			} else {
 				fmt.Println(text + ": command not found")
 			}
