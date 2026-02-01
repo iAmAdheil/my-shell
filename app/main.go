@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -14,14 +13,9 @@ func isExecAny(mode os.FileMode) bool {
 	return mode&0111 != 0
 }
 
-func ExtractEchoTxt(t string) string {
+func ExtractCmdTxt(t string) string {
 	echoTxt := strings.SplitN(t, " ", 2)[1]
 	return echoTxt
-}
-
-func ExtractTypeTxt(t string) string {
-	typeTxt := strings.SplitN(t, " ", 2)[1]
-	return typeTxt
 }
 
 func CommandRecog(t string) string {
@@ -36,6 +30,8 @@ func CommandRecog(t string) string {
 		return "type"
 	case "pwd":
 		return "pwd"
+	case "cd":
+		return "cd"
 	default:
 		return "not builtin"
 	}
@@ -107,11 +103,11 @@ func main() {
 		case "exit":
 			os.Exit(0)
 		case "echo":
-			fmt.Println(ExtractEchoTxt(text))
+			fmt.Println(ExtractCmdTxt(text))
 		case "type":
-			innerCom := strings.SplitN(text, " ", 2)[1]
+			innerCom := ExtractCmdTxt(text)
 			switch CommandRecog(innerCom) {
-			case "exit", "echo", "type", "pwd":
+			case "exit", "echo", "type", "pwd", "cd":
 				fmt.Println(innerCom, "is a shell builtin")
 			default:
 				exePath := CheckExeExistance(innerCom)
@@ -125,16 +121,21 @@ func main() {
 		case "pwd":
 			dir, err := os.Getwd()
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println(dir)
 			}
 			fmt.Println(dir)
+		case "cd":
+			path := ExtractCmdTxt(text)
+			if err := os.Chdir(path); err != nil {
+				fmt.Println("cd:", path+": No such file or directory")
+			}
 		default:
 			comParts := strings.Split(text, " ")
 			exePath := CheckExeExistance(comParts[0])
 			if len(exePath) > 0 {
 				err := ExecuteExe(comParts[0], comParts[1:])
 				if err != nil {
-					log.Fatal("Execution Failed:", err)
+					fmt.Println("Execution Failed:", err)
 				}
 			} else {
 				fmt.Println(text + ": command not found")
