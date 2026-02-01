@@ -126,6 +126,9 @@ func main() {
 			fmt.Println(dir)
 		case "cd":
 			path := ExtractCmdTxt(text)
+			if path == "~" {
+				path = os.Getenv("HOME")
+			}
 			if err := os.Chdir(path); err != nil {
 				fmt.Println("cd:", path+": No such file or directory")
 			}
