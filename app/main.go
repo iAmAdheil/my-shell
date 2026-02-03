@@ -8,37 +8,59 @@ import (
 	"strings"
 )
 
-func isExecAny(mode os.FileMode) bool {
+func IsExecAny(mode os.FileMode) bool {
 	// The 0111 octal bitmask checks the execute bits for owner, group, and others.
 	return mode&0111 != 0
 }
 
-func ExtractCmdTxt(t string) string {
+func HandleQuoteNormalisation(args string) string {
+	sl := strings.Split(args, "'")
+	result := ""
+	for _, str := range sl {
+		result += str
+	}
+	return strings.TrimSpace(result)
+}
+
+func HandlePlainNormalisation(args string) string {
+	resultSl := make([]string, 0)
+	sl := strings.Split(args, " ")
+	for _, str := range sl {
+		if len(strings.TrimSpace(str)) > 0 {
+			resultSl = append(resultSl, str)
+		}
+	}
+	return strings.Join(resultSl, " ")
+}
+
+func NormalizeArgs(args string) string {
+	if strings.Contains(args, "'") {
+		return HandleQuoteNormalisation(args)
+	}
+	return HandlePlainNormalisation(args)
+}
+
+func ExtractCmdArgs(t string) string {
 	echoTxt := strings.SplitN(t, " ", 2)[1]
-	return echoTxt
+	return NormalizeArgs(echoTxt)
 }
 
 func CommandRecog(t string) string {
 	com := strings.Split(t, " ")[0]
 
 	switch com {
-	case "exit":
-		return "exit"
-	case "echo":
-		return "echo"
-	case "type":
-		return "type"
-	case "pwd":
-		return "pwd"
-	case "cd":
-		return "cd"
+	case "exit", "echo", "type", "pwd", "cd":
+		return com
 	default:
 		return "not builtin"
 	}
 }
 
-func CheckExeExistance(filename string) string {
+func GetExePath(filename string) string {
 	path := os.Getenv("PATH")
+	if len(path) == 0 {
+		fmt.Println("no 'PATH' env variable set")
+	}
 	dirs := strings.Split(path, ":")
 
 	for _, dir := range dirs {
@@ -49,11 +71,11 @@ func CheckExeExistance(filename string) string {
 		for _, file := range files {
 			if file.Name() == filename {
 				fullPath := dir + "/" + filename
-				fileInfo, err := os.Stat(fullPath) // Replace "myprogram" with the file path
+				fileInfo, err := os.Stat(fullPath)
 				if err != nil {
 					break
 				}
-				if isExecAny(fileInfo.Mode().Perm()) {
+				if IsExecAny(fileInfo.Mode().Perm()) { // check file permissions
 					return fullPath
 				} else {
 					break
@@ -64,27 +86,133 @@ func CheckExeExistance(filename string) string {
 	return ""
 }
 
-func ExecuteExe(filename string, args []string) error {
-	process := exec.Command(filename, args...)
-	stdout, err := process.StdoutPipe()
+func RunExe(filename string, args []string) error {
+	proc := exec.Command(filename, args...)
+	stdout, err := proc.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	if err := process.Start(); err != nil {
+	if err := proc.Start(); err != nil {
 		return err
 	}
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
-		// Process the line immediately as it arrives
 		fmt.Println(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	if err := process.Wait(); err != nil {
+	if err := proc.Wait(); err != nil {
 		return err
 	}
 	return nil
+}
+
+func HandleExit() {
+	os.Exit(0)
+}
+
+func HandleEcho(com string) {
+	fmt.Println(ExtractCmdArgs(com))
+}
+
+func HandleType(com string) {
+	arg := ExtractCmdArgs(com)
+	switch CommandRecog(arg) {
+	case "exit", "echo", "type", "pwd", "cd":
+		fmt.Println(arg, "is a shell builtin")
+	default:
+		exePath := GetExePath(arg)
+
+		if len(exePath) > 0 {
+			fmt.Println(arg + " is " + exePath)
+		} else {
+			fmt.Println(arg + ": not found")
+		}
+	}
+}
+
+func HandlePwd() {
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(dir)
+}
+
+func HandleCd(com string) {
+	path := ExtractCmdArgs(com)
+	if path == "~" {
+		path = os.Getenv("HOME")
+	}
+	if err := os.Chdir(path); err != nil {
+		fmt.Println("cd:", path+": No such file or directory")
+	}
+}
+
+func HandleRunExeNormalisation(argsString string) []string {
+	if len(argsString) == 0 {
+		return []string{}
+	}
+
+	spl := strings.Split(argsString, " ")
+	temp := make([]string, 0)
+	argsSl := make([]string, 0)
+
+	i := 0
+	for i < len(spl) {
+		temp = []string{}
+		if strings.Contains(spl[i], "'") {
+			if spl[i][0] == '\'' && spl[i][len(spl[i])-1] == '\'' {
+				argsSl = append(argsSl, spl[i][1:len(spl[i])-1])
+				i += 1
+			} else if spl[i][0] == '\'' {
+				temp = append(temp, spl[i][1:])
+				for j := i + 1; j < len(spl); j++ {
+
+					if len(spl[j]) > 0 && spl[j][len(spl[j])-1] == '\'' {
+						temp = append(temp, spl[j][:len(spl[j])-1])
+						arg := strings.Join(temp, " ")
+						argsSl = append(argsSl, arg)
+						i = j + 1
+						break
+					}
+
+					temp = append(temp, spl[j])
+				}
+			}
+		} else {
+			argsSl = append(argsSl, spl[i])
+			i += 1
+		}
+	}
+
+	return argsSl
+}
+
+func HandleDefault(com string) {
+	if len(com) == 0 {
+		return
+	}
+	parts := strings.SplitN(com, " ", 2)
+	main := parts[0]
+	exePath := GetExePath(main)
+	if len(exePath) > 0 {
+		if len(parts) > 1 {
+			args := parts[1]
+			err := RunExe(main, HandleRunExeNormalisation(args))
+			if err != nil {
+				fmt.Println("execution failed:", err)
+			}
+		} else if len(parts) == 1 {
+			err := RunExe(main, HandleRunExeNormalisation(""))
+			if err != nil {
+				fmt.Println("execution failed:", err)
+			}
+		}
+	} else {
+		fmt.Println(com + ": command not found")
+	}
 }
 
 func main() {
@@ -95,54 +223,23 @@ func main() {
 		// starts write and fills up reader buffer
 		// once "enter" is pressed, stops, extracts text before delimiter and clears reader buffer
 		in, _ := reader.ReadString('\n')
-		text := strings.TrimSuffix(in, "\n")
+		com := strings.TrimSuffix(in, "\n")
 
-		com := CommandRecog(text)
+		comPref := CommandRecog(com)
 
-		switch com {
+		switch comPref {
 		case "exit":
-			os.Exit(0)
+			HandleExit()
 		case "echo":
-			fmt.Println(ExtractCmdTxt(text))
+			HandleEcho(com)
 		case "type":
-			innerCom := ExtractCmdTxt(text)
-			switch CommandRecog(innerCom) {
-			case "exit", "echo", "type", "pwd", "cd":
-				fmt.Println(innerCom, "is a shell builtin")
-			default:
-				exePath := CheckExeExistance(innerCom)
-
-				if len(exePath) > 0 {
-					fmt.Println(innerCom + " is " + exePath)
-				} else {
-					fmt.Println(innerCom + ": not found")
-				}
-			}
+			HandleType(com)
 		case "pwd":
-			dir, err := os.Getwd()
-			if err != nil {
-				fmt.Println(dir)
-			}
-			fmt.Println(dir)
+			HandlePwd()
 		case "cd":
-			path := ExtractCmdTxt(text)
-			if path == "~" {
-				path = os.Getenv("HOME")
-			}
-			if err := os.Chdir(path); err != nil {
-				fmt.Println("cd:", path+": No such file or directory")
-			}
+			HandleCd(com)
 		default:
-			comParts := strings.Split(text, " ")
-			exePath := CheckExeExistance(comParts[0])
-			if len(exePath) > 0 {
-				err := ExecuteExe(comParts[0], comParts[1:])
-				if err != nil {
-					fmt.Println("Execution Failed:", err)
-				}
-			} else {
-				fmt.Println(text + ": command not found")
-			}
+			HandleDefault(com)
 		}
 	}
 }
