@@ -1,3 +1,4 @@
+// "hello"  "script's"  test""example -> test on this
 package main
 
 import (
@@ -13,36 +14,10 @@ func IsExecAny(mode os.FileMode) bool {
 	return mode&0111 != 0
 }
 
-func HandleQuoteNormalisation(args string) string {
-	sl := strings.Split(args, "'")
-	result := ""
-	for _, str := range sl {
-		result += str
-	}
-	return strings.TrimSpace(result)
-}
-
-func HandlePlainNormalisation(args string) string {
-	resultSl := make([]string, 0)
-	sl := strings.Split(args, " ")
-	for _, str := range sl {
-		if len(strings.TrimSpace(str)) > 0 {
-			resultSl = append(resultSl, str)
-		}
-	}
-	return strings.Join(resultSl, " ")
-}
-
-func NormalizeArgs(args string) string {
-	if strings.Contains(args, "'") {
-		return HandleQuoteNormalisation(args)
-	}
-	return HandlePlainNormalisation(args)
-}
-
 func ExtractCmdArgs(t string) string {
 	echoTxt := strings.SplitN(t, " ", 2)[1]
-	return NormalizeArgs(echoTxt)
+	resultStr := HandleNormalisation(echoTxt)
+	return strings.Join(resultStr, " ")
 }
 
 func CommandRecog(t string) string {
@@ -150,7 +125,48 @@ func HandleCd(com string) {
 	}
 }
 
-func HandleRunExeNormalisation(argsString string) []string {
+func HandleDefault(com string) {
+	if len(com) == 0 {
+		return
+	}
+	parts := strings.SplitN(com, " ", 2)
+	main := parts[0]
+	exePath := GetExePath(main)
+	if len(exePath) > 0 {
+		if len(parts) > 1 {
+			args := parts[1]
+			err := RunExe(main, HandleNormalisation(args))
+			if err != nil {
+				fmt.Println("execution failed:", err)
+			}
+		} else if len(parts) == 1 {
+			err := RunExe(main, HandleNormalisation(""))
+			if err != nil {
+				fmt.Println("execution failed:", err)
+			}
+		}
+	} else {
+		fmt.Println(com + ": command not found")
+	}
+}
+
+func HandleQuoteRemoval(argString string) string {
+	runes := []rune(argString)
+	clean := make([]rune, 0, len(runes))
+
+	for i := 0; i < len(runes); i++ {
+		if (runes[i] == '"' || runes[i] == '\'') && i+1 < len(runes) && (runes[i+1] == '"' || runes[i+1] == '\'') {
+			i++
+			continue
+		}
+
+		clean = append(clean, runes[i])
+	}
+
+	return string(clean)
+}
+
+func HandleNormalisation(argsString string) []string {
 	if len(argsString) == 0 {
 		return []string{}
 	}
@@ -162,14 +178,32 @@ func HandleRunExeNormalisation(argsString string) []string {
 	i := 0
 	for i < len(spl) {
 		temp = []string{}
-		if strings.Contains(spl[i], "'") {
-			if spl[i][0] == '\'' && spl[i][len(spl[i])-1] == '\'' {
-				argsSl = append(argsSl, spl[i][1:len(spl[i])-1])
+		if len(strings.TrimSpace(spl[i])) == 0 {
+			i += 1
+		} else if spl[i][0] == '"' {
+			if spl[i][len(spl[i])-1] == '"' {
+				argsSl = append(argsSl, HandleQuoteRemoval(spl[i][1:len(spl[i])-1]))
 				i += 1
-			} else if spl[i][0] == '\'' {
+			} else {
 				temp = append(temp, spl[i][1:])
 				for j := i + 1; j < len(spl); j++ {
-
+					if len(spl[j]) > 0 && spl[j][len(spl[j])-1] == '"' {
+						temp = append(temp, spl[j][:len(spl[j])-1])
+						arg := strings.Join(temp, " ")
+						argsSl = append(argsSl, arg)
+						i = j + 1
+						break
+					}
+					temp = append(temp, spl[j])
+				}
+			}
+		} else if spl[i][0] == '\'' {
+			if spl[i][len(spl[i])-1] == '\'' {
+				argsSl = append(argsSl, HandleQuoteRemoval(spl[i][1:len(spl[i])-1]))
+				i += 1
+			} else {
+				temp = append(temp, spl[i][1:])
+				for j := i + 1; j < len(spl); j++ {
 					if len(spl[j]) > 0 && spl[j][len(spl[j])-1] == '\'' {
 						temp = append(temp, spl[j][:len(spl[j])-1])
 						arg := strings.Join(temp, " ")
@@ -177,42 +211,16 @@ func HandleRunExeNormalisation(argsString string) []string {
 						i = j + 1
 						break
 					}
-
 					temp = append(temp, spl[j])
 				}
 			}
 		} else {
-			argsSl = append(argsSl, spl[i])
+			argsSl = append(argsSl, HandleQuoteRemoval(spl[i]))
 			i += 1
 		}
 	}
 
 	return argsSl
-}
-
-func HandleDefault(com string) {
-	if len(com) == 0 {
-		return
-	}
-	parts := strings.SplitN(com, " ", 2)
-	main := parts[0]
-	exePath := GetExePath(main)
-	if len(exePath) > 0 {
-		if len(parts) > 1 {
-			args := parts[1]
-			err := RunExe(main, HandleRunExeNormalisation(args))
-			if err != nil {
-				fmt.Println("execution failed:", err)
-			}
-		} else if len(parts) == 1 {
-			err := RunExe(main, HandleRunExeNormalisation(""))
-			if err != nil {
-				fmt.Println("execution failed:", err)
-			}
-		}
-	} else {
-		fmt.Println(com + ": command not found")
-	}
 }
 
 func main() {
@@ -242,4 +250,11 @@ func main() {
 			HandleDefault(com)
 		}
 	}
+
+	//TESTING ENV
+	// str := "\"/tmp/ant/f 60\" \"/tmp/ant/f   54\" \"/tmp/ant/f's98\""
+	// res := HandleNormalisation(str)
+	// for i, v := range res {
+	// 	fmt.Println("index:", i, "value:", v)
+	// }
 }
