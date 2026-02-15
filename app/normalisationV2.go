@@ -77,7 +77,7 @@ func HandleNormalisationV2(str string) []string {
 	return args
 }
 
-func GetArgs(str string) []string {
+func GetNormalCom(str string) []string {
 	fArgs := []string{}
 	args := HandleNormalisationV2(str)
 	temp := []string{}
@@ -96,5 +96,6 @@ func GetArgs(str string) []string {
 		fArgs = append(fArgs, strings.Join(temp, ""))
 	}
 
+	// join using strings.Join(fArgs, " ") for final args string
 	return fArgs
 }
