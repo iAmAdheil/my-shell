@@ -49,8 +49,13 @@ func HandleNormalisationV2(str string) []string {
 			for ; j < len(str); j++ {
 				if str[j] == '"' {
 					break
+				} else if str[j] == '\\' {
+					temp = append(temp, str[j+1])
+					// only increment once as loop will also increment j
+					j += 1
+				} else {
+					temp = append(temp, str[j])
 				}
-				temp = append(temp, str[j])
 			}
 			arg := string(temp)
 			args = append(args, arg)
