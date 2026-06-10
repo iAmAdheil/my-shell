@@ -14,15 +14,15 @@ func IsExecAny(mode os.FileMode) bool {
 	return mode&0111 != 0
 }
 
-func GetCommand(com string) (string, []string) {
-	comParts := GetNormalCom(com)
-	if len(comParts) == 0 {
-		return "", comParts
+func GetComm(com string) (string, []string) {
+	commParts := SplitComm(com)
+	if len(commParts) == 0 {
+		return "", commParts
 	}
-	return comParts[0], comParts[1:]
+	return commParts[0], commParts[1:]
 }
 
-func GetExePath(filename string) string {
+func GetBinaryPath(filename string) string {
 	path := os.Getenv("PATH")
 	if len(path) == 0 {
 		fmt.Println("no 'PATH' env variable set")
@@ -53,7 +53,7 @@ func GetExePath(filename string) string {
 	return ""
 }
 
-func RunExe(filename string, args []string) error {
+func RunBinary(filename string, args []string) error {
 	proc := exec.Command(filename, args...)
 	stdout, err := proc.StdoutPipe()
 	if err != nil {
@@ -93,7 +93,7 @@ func HandleType(args []string) {
 	case "exit", "echo", "type", "pwd", "cd":
 		fmt.Println(com, "is a shell builtin")
 	default:
-		exePath := GetExePath(com)
+		exePath := GetBinaryPath(com)
 
 		if len(exePath) > 0 {
 			fmt.Println(com + " is " + exePath)
@@ -129,10 +129,10 @@ func HandleDefault(main string, args []string) {
 		return
 	}
 
-	exePath := GetExePath(main)
+	exePath := GetBinaryPath(main)
 
 	if len(exePath) > 0 {
-		err := RunExe(main, args)
+		err := RunBinary(main, args)
 		if err != nil {
 			fmt.Println("execution failed:", err)
 		}
@@ -151,7 +151,7 @@ func main() {
 		in, _ := reader.ReadString('\n')
 		com := strings.TrimSuffix(in, "\n")
 
-		main, args := GetCommand(com)
+		main, args := GetComm(com)
 
 		switch main {
 		case "exit":

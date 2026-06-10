@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func HandleNormalisationV2(str string) []string {
+func NormaliseComm(str string) []string {
 	args := []string{}
 	temp := []byte{}
 
@@ -77,9 +77,9 @@ func HandleNormalisationV2(str string) []string {
 	return args
 }
 
-func GetNormalCom(str string) []string {
+func SplitComm(str string) []string {
 	fArgs := []string{}
-	args := HandleNormalisationV2(str)
+	args := NormaliseComm(str)
 	temp := []string{}
 
 	for _, arg := range args {
