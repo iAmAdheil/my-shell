@@ -53,20 +53,12 @@ func GetBinaryPath(filename string) string {
 	return ""
 }
 
-func RunBinary(filename string, args []string) error {
-	proc := exec.Command(filename, args...)
-	stdout, err := proc.StdoutPipe()
-	if err != nil {
-		return err
-	}
+func RunBinary(file string, args []string) error {
+	proc := exec.Command(file, args...)
 	if err := proc.Start(); err != nil {
 		return err
 	}
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
+	if err := HandleOut(proc); err != nil {
 		return err
 	}
 	if err := proc.Wait(); err != nil {
@@ -168,11 +160,4 @@ func main() {
 			HandleDefault(main, args)
 		}
 	}
-
-	//TESTING ENV
-	// str := "\"/tmp/ant/f 60\" \"/tmp/ant/f   54\" \"/tmp/ant/f's98\""
-	// res := GetArgs(str)
-	// for i, v := range res {
-	// 	fmt.Println("index:", i, "value:", v)
-	// }
 }
