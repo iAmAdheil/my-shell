@@ -53,17 +53,50 @@ func GetBinaryPath(filename string) string {
 	return ""
 }
 
-func RunBinary(file string, args []string) error {
+func RunBinary(file string, args []string, outFile string) error {
 	proc := exec.Command(file, args...)
+
+	stdout, err := proc.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := proc.StderrPipe()
+	if err != nil {
+		return err
+	}
+
 	if err := proc.Start(); err != nil {
 		return err
 	}
-	if err := HandleOut(proc); err != nil {
-		return err
+
+	if len(outFile) > 0 {
+		if err := HandleBinaryFileOut(outFile, stdout, stderr); err != nil {
+			return err
+		}
+	} else {
+		if err := HandleBinaryOut(stdout, stderr); err != nil {
+			return err
+		}
 	}
+
+	errScanner := bufio.NewScanner(stderr)
+	var errStr string
+	for errScanner.Scan() {
+		errStr += errScanner.Text()
+	}
+
+	if err := errScanner.Err(); err != nil {
+		fmt.Errorf("reading from pipe failed: %s", err)
+	}
+
+	if len(errStr) > 0 {
+		return fmt.Errorf("%s", errStr)
+	}
+
 	if err := proc.Wait(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -71,8 +104,16 @@ func HandleExit() {
 	os.Exit(0)
 }
 
-func HandleEcho(args []string) {
-	fmt.Println(strings.Join(args, " "))
+func HandleEcho(args []string) error {
+	if len(args) >= 2 && (args[len(args)-2] == ">" || args[len(args)-2] == "1>") {
+		filepath := args[len(args)-1]
+		args = args[:len(args)-2]
+		HandleFileOut(strings.Join(args, " "), filepath)
+	} else {
+		fmt.Println(strings.Join(args, " "))
+	}
+
+	return nil
 }
 
 func HandleType(args []string) {
@@ -123,13 +164,21 @@ func HandleDefault(main string, args []string) {
 
 	exePath := GetBinaryPath(main)
 
+	var outFilePath string
 	if len(exePath) > 0 {
-		err := RunBinary(main, args)
+
+		if len(args) >= 2 && (args[len(args)-2] == ">" || args[len(args)-2] == "1>") {
+			outFilePath = args[len(args)-1]
+			args = args[:len(args)-2]
+		}
+
+		err := RunBinary(main, args, outFilePath)
 		if err != nil {
-			fmt.Println("execution failed:", err)
+			// cat: nonexistent: No such file or directory
+			fmt.Printf("%s\n", err)
 		}
 	} else {
-		fmt.Println(main + ": command not found")
+		fmt.Printf("%s: command not found\n", main)
 	}
 }
 
