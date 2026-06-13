@@ -26,15 +26,15 @@ func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
 	}
 }
 
-func HandleFileOut(filepath string, s *bufio.Scanner, wg *sync.WaitGroup) {
-	if err := handleFileWrite(filepath, s, wg); err != nil {
+func HandleFileOut(filepath string, s *bufio.Scanner, wg *sync.WaitGroup, mode int) {
+	if err := handleFileWrite(filepath, s, wg, mode); err != nil {
 		fmt.Errorf("file out failed: %s\n", err)
 	}
 
 }
 
-func handleFileWrite(filepath string, s *bufio.Scanner, wg *sync.WaitGroup) error {
-	f, err := OpenFile(filepath)
+func handleFileWrite(filepath string, s *bufio.Scanner, wg *sync.WaitGroup, mode int) error {
+	f, err := OpenFile(filepath, mode)
 	if err != nil {
 		return err
 	}

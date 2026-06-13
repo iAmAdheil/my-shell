@@ -57,7 +57,7 @@ func GetBinaryPath(filename string) string {
 
 // redirect == 1 -> stdout
 // redirect == 2 -> stderr
-func RunBinary(file string, args []string, outFile string, redirect int) error {
+func RunBinary(file string, args []string, outFile string, redirect int, mode int) error {
 	proc := exec.Command(file, args...)
 
 	stdout, err := proc.StdoutPipe()
@@ -88,7 +88,7 @@ func RunBinary(file string, args []string, outFile string, redirect int) error {
 		if redirect == 1 {
 			wg.Add(1)
 
-			go HandleFileOut(outFile, outScanner, wg)
+			go HandleFileOut(outFile, outScanner, wg, mode)
 			go HandlePrintOut(errScanner, errstrch, true)
 
 			errstr := <-errstrch
@@ -100,7 +100,7 @@ func RunBinary(file string, args []string, outFile string, redirect int) error {
 		} else if redirect == 2 {
 			wg.Add(1)
 
-			go HandleFileOut(outFile, errScanner, wg)
+			go HandleFileOut(outFile, errScanner, wg, mode)
 			go HandlePrintOut(outScanner, nil, false)
 
 			wg.Wait()
@@ -188,7 +188,7 @@ func HandleCd(args []string) {
 	}
 }
 
-func HandleDefault(main string, args []string, filepath string, redirect int) {
+func HandleDefault(main string, args []string, filepath string, redirect int, mode int) {
 	if len(main) == 0 {
 		return
 	}
@@ -196,7 +196,7 @@ func HandleDefault(main string, args []string, filepath string, redirect int) {
 	exePath := GetBinaryPath(main)
 
 	if len(exePath) > 0 {
-		err := RunBinary(main, args, filepath, redirect)
+		err := RunBinary(main, args, filepath, redirect, mode)
 		if err != nil {
 			// cat: nonexistent: No such file or directory
 			fmt.Printf("%s\n", err)
@@ -218,14 +218,20 @@ func main() {
 
 		main, args := GetComm(com)
 		var (
+			fileArg     string = args[len(args)-2]
 			outFilePath string
 			redirect    int = 0
+			mode        int = 0
 		)
 
-		if len(args) >= 2 && (args[len(args)-2] == ">" || args[len(args)-2] == "1>" || args[len(args)-2] == "2>") {
-			if args[len(args)-2] == ">" || args[len(args)-2] == "1>" {
+		if len(args) >= 2 && (strings.Contains(fileArg, ">") || strings.Contains(fileArg, "1>") || strings.Contains(fileArg, "2>")) {
+			if strings.Count(fileArg, ">") == 2 {
+				mode = 1
+			}
+
+			if fileArg[0:2] == ">" || fileArg[0:2] == "1>" {
 				redirect = 1
-			} else if args[len(args)-2] == "2>" {
+			} else if fileArg[0:2] == "2>" {
 				redirect = 2
 			}
 
@@ -245,7 +251,7 @@ func main() {
 		case "cd":
 			HandleCd(args)
 		default:
-			HandleDefault(main, args, outFilePath, redirect)
+			HandleDefault(main, args, outFilePath, redirect, mode)
 		}
 	}
 }
