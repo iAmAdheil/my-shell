@@ -2,97 +2,55 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"io"
-	"os"
 	"sync"
 )
 
-func HandleBinaryOut(stdout, stderr io.ReadCloser) error {
-	wg := &sync.WaitGroup{}
-
-	outScanner := bufio.NewScanner(stdout)
-	// errScanner := bufio.NewScanner(stderr)
-
-	wg.Add(1)
-
-	go handlePrint(outScanner, wg)
-	// go handlePrint(errScanner, wg)
-
-	wg.Wait()
-
-	return nil
-}
-
-func handlePrint(s *bufio.Scanner, wg *sync.WaitGroup) {
+func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
+	// isErr -> collect only, no print
+	var out string
 	for s.Scan() {
-		fmt.Println(s.Text())
+		buf := s.Text()
+		if !isErr {
+			fmt.Println(buf)
+		}
+		out += buf
 	}
 
 	if err := s.Err(); err != nil {
 		fmt.Errorf("reading from pipe failed: %s", err)
 	}
 
-	wg.Done()
+	if errstrch != nil {
+		errstrch <- out
+	}
 }
 
-func HandleBinaryFileOut(filepath string, stdout, stderr io.ReadCloser) error {
-	wg := &sync.WaitGroup{}
-	// errCh := make(chan string)
-	file, err := OpenFile(filepath)
-	if err != nil {
-		return err
+func HandleFileOut(filepath string, s *bufio.Scanner, wg *sync.WaitGroup) {
+	if err := handleFileWrite(filepath, s, wg); err != nil {
+		fmt.Errorf("file out failed: %s\n", err)
 	}
 
-	outScanner := bufio.NewScanner(stdout)
-	// errScanner := bufio.NewScanner(stderr)
-
-	wg.Add(1)
-
-	go handleFileWrite(file, outScanner, nil, wg)
-	// go handleFileWrite(file, errScanner, errCh, nil)
-
-	// errStr := <-errCh
-	wg.Wait()
-
-	// if len(errStr) > 0 {
-	// 	return fmt.Errorf("%s", errStr)
-	// }
-	return nil
 }
 
-func HandleFileOut(out string, filepath string) error {
+func handleFileWrite(filepath string, s *bufio.Scanner, wg *sync.WaitGroup) error {
 	f, err := OpenFile(filepath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-
-	buf := bytes.NewBufferString(out)
-	s := bufio.NewScanner(buf)
-	handleFileWrite(f, s, nil, nil)
-
-	return nil
-}
-
-func handleFileWrite(w *os.File, s *bufio.Scanner, errCh chan string, wg *sync.WaitGroup) {
-	// var out string
 	for s.Scan() {
 		buf := s.Text()
-		w.WriteString(buf)
-		w.WriteString("\n")
-		// out += buf
+		f.WriteString(buf)
+		f.WriteString("\n")
 	}
 
 	if err := s.Err(); err != nil {
-		fmt.Errorf("reading from pipe failed: %s", err)
+		return err
 	}
 
-	// if errCh != nil {
-	// 	errCh <- out
-	// }
 	if wg != nil {
 		wg.Done()
 	}
+
+	return nil
 }

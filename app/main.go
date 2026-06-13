@@ -3,10 +3,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 func IsExecAny(mode os.FileMode) bool {
@@ -53,7 +55,9 @@ func GetBinaryPath(filename string) string {
 	return ""
 }
 
-func RunBinary(file string, args []string, outFile string) error {
+// redirect == 1 -> stdout
+// redirect == 2 -> stderr
+func RunBinary(file string, args []string, outFile string, redirect int) error {
 	proc := exec.Command(file, args...)
 
 	stdout, err := proc.StdoutPipe()
@@ -69,34 +73,42 @@ func RunBinary(file string, args []string, outFile string) error {
 		return err
 	}
 
+	var (
+		wg         *sync.WaitGroup = &sync.WaitGroup{}
+		errstrch   chan string     = make(chan string)
+		outScanner *bufio.Scanner  = bufio.NewScanner(stdout)
+		errScanner *bufio.Scanner  = bufio.NewScanner(stderr)
+	)
+
+	// if redirect == 1 -> stdout to file and print stderr message
+	// from chan and ignore the err from proc.wait
+	// if redirect == 2 -> stderr to file and print stdout message,
+	// ignore the err from proc.wait
 	if len(outFile) > 0 {
-		if err := HandleBinaryFileOut(outFile, stdout, stderr); err != nil {
-			return err
+		if redirect == 1 {
+			wg.Add(1)
+
+			go HandleFileOut(outFile, outScanner, wg)
+			go HandlePrintOut(errScanner, errstrch, true)
+
+			errstr := <-errstrch
+			if len(errstr) > 0 {
+				return fmt.Errorf("%s", errstr)
+			}
+
+			wg.Wait()
+		} else if redirect == 2 {
+			wg.Add(1)
+
+			go HandleFileOut(outFile, errScanner, wg)
+			go HandlePrintOut(outScanner, nil, false)
+
+			wg.Wait()
 		}
-	} else {
-		if err := HandleBinaryOut(stdout, stderr); err != nil {
-			return err
-		}
 	}
 
-	errScanner := bufio.NewScanner(stderr)
-	var errStr string
-	for errScanner.Scan() {
-		errStr += errScanner.Text()
-	}
-
-	if err := errScanner.Err(); err != nil {
-		fmt.Errorf("reading from pipe failed: %s", err)
-	}
-
-	if len(errStr) > 0 {
-		return fmt.Errorf("%s", errStr)
-	}
-
-	if err := proc.Wait(); err != nil {
-		return err
-	}
-
+	// ignore err from proc, handled by stderr pipe
+	proc.Wait()
 	return nil
 }
 
@@ -104,11 +116,15 @@ func HandleExit() {
 	os.Exit(0)
 }
 
-func HandleEcho(args []string) error {
-	if len(args) >= 2 && (args[len(args)-2] == ">" || args[len(args)-2] == "1>") {
-		filepath := args[len(args)-1]
-		args = args[:len(args)-2]
-		HandleFileOut(strings.Join(args, " "), filepath)
+func HandleEcho(args []string, filepath string, redirect int) error {
+	wg := &sync.WaitGroup{}
+
+	if len(filepath) > 0 && redirect == 1 {
+		wg.Add(1)
+		r := bytes.NewBufferString(strings.Join(args, " "))
+		s := bufio.NewScanner(r)
+		HandleFileOut(filepath, s, wg)
+		wg.Wait()
 	} else {
 		fmt.Println(strings.Join(args, " "))
 	}
@@ -157,22 +173,15 @@ func HandleCd(args []string) {
 	}
 }
 
-func HandleDefault(main string, args []string) {
-	if len(main) == 0 && len(args) == 0 {
+func HandleDefault(main string, args []string, filepath string, redirect int) {
+	if len(main) == 0 {
 		return
 	}
 
 	exePath := GetBinaryPath(main)
 
-	var outFilePath string
 	if len(exePath) > 0 {
-
-		if len(args) >= 2 && (args[len(args)-2] == ">" || args[len(args)-2] == "1>") {
-			outFilePath = args[len(args)-1]
-			args = args[:len(args)-2]
-		}
-
-		err := RunBinary(main, args, outFilePath)
+		err := RunBinary(main, args, filepath, redirect)
 		if err != nil {
 			// cat: nonexistent: No such file or directory
 			fmt.Printf("%s\n", err)
@@ -193,12 +202,27 @@ func main() {
 		com := strings.TrimSuffix(in, "\n")
 
 		main, args := GetComm(com)
+		var (
+			outFilePath string
+			redirect    int = 0
+		)
+
+		if len(args) >= 2 && (args[len(args)-2] == ">" || args[len(args)-2] == "1>" || args[len(args)-2] == "2>") {
+			if args[len(args)-2] == ">" || args[len(args)-2] == "1>" {
+				redirect = 1
+			} else if args[len(args)-2] == "2>" {
+				redirect = 2
+			}
+
+			outFilePath = args[len(args)-1]
+			args = args[:len(args)-2]
+		}
 
 		switch main {
 		case "exit":
 			HandleExit()
 		case "echo":
-			HandleEcho(args)
+			HandleEcho(args, outFilePath, redirect)
 		case "type":
 			HandleType(args)
 		case "pwd":
@@ -206,7 +230,7 @@ func main() {
 		case "cd":
 			HandleCd(args)
 		default:
-			HandleDefault(main, args)
+			HandleDefault(main, args, outFilePath, redirect)
 		}
 	}
 }
