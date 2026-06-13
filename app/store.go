@@ -6,10 +6,8 @@ import (
 )
 
 func OpenFile(filepath string, mode int) (*os.File, error) {
-	var wPerm int
-	if mode == 0 {
-		wPerm = os.O_TRUNC
-	} else if mode == 1 {
+	var wPerm int = os.O_TRUNC
+	if mode == 1 {
 		wPerm = os.O_APPEND
 	}
 

@@ -124,7 +124,7 @@ func HandleExit() {
 	os.Exit(0)
 }
 
-func HandleEcho(args []string, filepath string, redirect int) error {
+func HandleEcho(args []string, filepath string, redirect int, mode int) error {
 	wg := &sync.WaitGroup{}
 	var (
 		out     string = strings.Join(args, " ")
@@ -137,7 +137,7 @@ func HandleEcho(args []string, filepath string, redirect int) error {
 		wg.Add(1)
 		r := bytes.NewBufferString(fileout)
 		s := bufio.NewScanner(r)
-		HandleFileOut(filepath, s, wg)
+		HandleFileOut(filepath, s, wg, mode)
 		wg.Wait()
 	}
 	if redirect == 0 || redirect == 2 {
@@ -218,32 +218,34 @@ func main() {
 
 		main, args := GetComm(com)
 		var (
-			fileArg     string = args[len(args)-2]
 			outFilePath string
 			redirect    int = 0
 			mode        int = 0
 		)
 
-		if len(args) >= 2 && (strings.Contains(fileArg, ">") || strings.Contains(fileArg, "1>") || strings.Contains(fileArg, "2>")) {
-			if strings.Count(fileArg, ">") == 2 {
-				mode = 1
-			}
+		if len(args) >= 2 {
+			fileArg := args[len(args)-2]
+			if strings.Contains(fileArg, ">") || strings.Contains(fileArg, "1>") || strings.Contains(fileArg, "2>") {
+				if strings.Count(fileArg, ">") == 2 {
+					mode = 1
+				}
 
-			if fileArg[0:2] == ">" || fileArg[0:2] == "1>" {
-				redirect = 1
-			} else if fileArg[0:2] == "2>" {
-				redirect = 2
-			}
+				if fileArg[0:1] == ">" || fileArg[0:2] == "1>" {
+					redirect = 1
+				} else if fileArg[0:2] == "2>" {
+					redirect = 2
+				}
 
-			outFilePath = args[len(args)-1]
-			args = args[:len(args)-2]
+				outFilePath = args[len(args)-1]
+				args = args[:len(args)-2]
+			}
 		}
 
 		switch main {
 		case "exit":
 			HandleExit()
 		case "echo":
-			HandleEcho(args, outFilePath, redirect)
+			HandleEcho(args, outFilePath, redirect, mode)
 		case "type":
 			HandleType(args)
 		case "pwd":
