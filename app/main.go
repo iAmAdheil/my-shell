@@ -105,6 +105,14 @@ func RunBinary(file string, args []string, outFile string, redirect int) error {
 
 			wg.Wait()
 		}
+	} else {
+		go HandlePrintOut(outScanner, nil, false)
+		go HandlePrintOut(errScanner, errstrch, true)
+
+		errstr := <-errstrch
+		if len(errstr) > 0 {
+			return fmt.Errorf("%s", errstr)
+		}
 	}
 
 	// ignore err from proc, handled by stderr pipe
@@ -118,15 +126,22 @@ func HandleExit() {
 
 func HandleEcho(args []string, filepath string, redirect int) error {
 	wg := &sync.WaitGroup{}
-
-	if len(filepath) > 0 && redirect == 1 {
+	var (
+		out     string = strings.Join(args, " ")
+		fileout string = strings.Join(args, " ")
+	)
+	if redirect == 2 {
+		fileout = ""
+	}
+	if len(filepath) > 0 {
 		wg.Add(1)
-		r := bytes.NewBufferString(strings.Join(args, " "))
+		r := bytes.NewBufferString(fileout)
 		s := bufio.NewScanner(r)
 		HandleFileOut(filepath, s, wg)
 		wg.Wait()
-	} else {
-		fmt.Println(strings.Join(args, " "))
+	}
+	if redirect == 0 || redirect == 2 {
+		fmt.Println(out)
 	}
 
 	return nil
