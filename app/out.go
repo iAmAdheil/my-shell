@@ -12,13 +12,13 @@ func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
 	for s.Scan() {
 		buf := s.Text()
 		if !isErr {
-			fmt.Println(buf)
+			fmt.Printf("%s\n\r", buf)
 		}
 		out += buf
 	}
 
 	if err := s.Err(); err != nil {
-		fmt.Errorf("reading from pipe failed: %s", err)
+		fmt.Errorf("reading from pipe failed: %s\n\r", err)
 	}
 
 	if errstrch != nil {
@@ -28,7 +28,7 @@ func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
 
 func HandleFileOut(filepath string, s *bufio.Scanner, wg *sync.WaitGroup, mode int) {
 	if err := handleFileWrite(filepath, s, wg, mode); err != nil {
-		fmt.Errorf("file out failed: %s\n", err)
+		fmt.Errorf("file out failed: %s\n\r", err)
 	}
 
 }

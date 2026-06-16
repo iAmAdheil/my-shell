@@ -2,10 +2,11 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
 	"os"
-	"strings"
+
+	"golang.org/x/term"
 )
 
 func GetComm(com string) (string, []string) {
@@ -17,36 +18,37 @@ func GetComm(com string) (string, []string) {
 }
 
 func main() {
-	// TODO: Uncomment the code below to pass the first stage
-	reader := bufio.NewReader(os.Stdin)
+	oldState := EnableRaw()
+	// Ensure we restore the terminal state when finished
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+	in := make([]byte, 0)
+	txt := bytes.NewBuffer(in)
+
+	fmt.Printf("$ ")
+
+	b := make([]byte, 1)
 	for {
-		fmt.Print("$ ")
-		// starts write and fills up reader buffer
-		// once "enter" is pressed, stops, extracts text before delimiter and clears reader buffer
-		in, _ := reader.ReadString('\n')
-		com := strings.TrimSuffix(in, "\n")
-
-		main, args := GetComm(com)
-		var (
-			outFilePath string
-			redirect    int = 0
-			mode        int = 0
-		)
-		args = RedirectFilter(args, &mode, &redirect, &outFilePath)
-
-		switch main {
-		case "exit":
-			HandleExit()
-		case "echo":
-			HandleEcho(args, outFilePath, redirect, mode)
-		case "type":
-			HandleType(args)
-		case "pwd":
-			HandlePwd()
-		case "cd":
-			HandleCd(args)
-		default:
-			HandleDefault(main, args, outFilePath, redirect, mode)
+		if _, err := os.Stdin.Read(b); err != nil {
+			fmt.Printf("error: %s\n\r", err)
+			break
 		}
+
+		if b[0] == 3 {
+			break
+		}
+		if b[0] == 13 {
+			Return(txt)
+			continue
+		}
+
+		if err := txt.WriteByte(b[0]); err != nil {
+			fmt.Printf("error: %s\n\r", err)
+		}
+		fmt.Printf("%s", string(b[0]))
 	}
 }
+
+// tab => 9
+// ctrl+c => 3
+// \n => 13

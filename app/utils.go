@@ -3,14 +3,11 @@ package main
 import (
 	"os"
 	"strings"
+
+	"golang.org/x/term"
 )
 
-// checks if a binary has executable permissions
-func IsExecAny(mode os.FileMode) bool {
-	// The 0111 octal bitmask checks the execute bits for owner, group, and others.
-	return mode&0111 != 0
-}
-
+// handles args and vars to handle output redirect
 func RedirectFilter(args []string, mode *int, redirect *int, outFilePath *string) []string {
 	if len(args) >= 2 {
 		fileArg := args[len(args)-2]
@@ -31,4 +28,20 @@ func RedirectFilter(args []string, mode *int, redirect *int, outFilePath *string
 	}
 
 	return args
+}
+
+// switches terminal from cooked to raw mode
+func EnableRaw() *term.State {
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+
+	return oldState
+}
+
+// checks if a binary has executable permissions
+func IsExecAny(mode os.FileMode) bool {
+	// The 0111 octal bitmask checks the execute bits for owner, group, and others.
+	return mode&0111 != 0
 }

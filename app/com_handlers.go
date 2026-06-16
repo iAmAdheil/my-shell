@@ -17,9 +17,9 @@ func HandleExit() {
 func HandlePwd() {
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("%s\n\r", err)
 	}
-	fmt.Println(dir)
+	fmt.Printf("%s\n\r", dir)
 }
 
 func HandleCd(args []string) {
@@ -31,7 +31,7 @@ func HandleCd(args []string) {
 		path = os.Getenv("HOME")
 	}
 	if err := os.Chdir(path); err != nil {
-		fmt.Println("cd:", path+": No such file or directory")
+		fmt.Printf("cd: %s: No such file or directory\n\r", path)
 	}
 }
 
@@ -52,7 +52,7 @@ func HandleEcho(args []string, filepath string, redirect int, mode int) error {
 		wg.Wait()
 	}
 	if redirect == 0 || redirect == 2 {
-		fmt.Println(out)
+		fmt.Printf("%s\n\r", out)
 	}
 
 	return nil
@@ -66,14 +66,14 @@ func HandleType(args []string) {
 	com := args[0]
 	switch com {
 	case "exit", "echo", "type", "pwd", "cd":
-		fmt.Println(com, "is a shell builtin")
+		fmt.Printf("%s is a shell builtin\n\r", com)
 	default:
 		exePath := GetBinaryPath(com)
 
 		if len(exePath) > 0 {
-			fmt.Println(com + " is " + exePath)
+			fmt.Printf("%s is %s\n\r", com, exePath)
 		} else {
-			fmt.Println(com + ": not found")
+			fmt.Printf("%s: not found\n\r", com)
 		}
 	}
 }
@@ -81,7 +81,7 @@ func HandleType(args []string) {
 func GetBinaryPath(filename string) string {
 	path := os.Getenv("PATH")
 	if len(path) == 0 {
-		fmt.Println("no 'PATH' env variable set")
+		fmt.Printf("no 'PATH' env variable set\n\r")
 	}
 
 	dirs := strings.Split(path, ":")
@@ -147,7 +147,7 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 
 			errstr := <-errstrch
 			if len(errstr) > 0 {
-				return fmt.Errorf("%s", errstr)
+				return fmt.Errorf("%s\n\r", errstr)
 			}
 
 			wg.Wait()
@@ -165,7 +165,7 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 
 		errstr := <-errstrch
 		if len(errstr) > 0 {
-			return fmt.Errorf("%s", errstr)
+			return fmt.Errorf("%s\n\r", errstr)
 		}
 	}
 
@@ -185,9 +185,9 @@ func HandleDefault(main string, args []string, filepath string, redirect int, mo
 		err := RunBinary(main, args, filepath, redirect, mode)
 		if err != nil {
 			// cat: nonexistent: No such file or directory
-			fmt.Printf("%s\n", err)
+			fmt.Printf("%s\n\r", err)
 		}
 	} else {
-		fmt.Printf("%s: command not found\n", main)
+		fmt.Printf("%s: command not found\n\r", main)
 	}
 }
