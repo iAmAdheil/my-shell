@@ -41,6 +41,24 @@ func main() {
 			Return(txt)
 			continue
 		}
+		if b[0] == 127 {
+			Delete(txt)
+			continue
+		}
+		if b[0] == 9 {
+			sug := Tab(txt.String())
+			if len(sug) == 0 {
+				continue
+			}
+			Clear(txt)
+
+			// 2. Print your new string in one go
+			fmt.Printf("%s ", sug)
+			if _, err := txt.WriteString(sug); err != nil {
+				fmt.Printf("error: %s\n\r", err)
+			}
+			continue
+		}
 
 		if err := txt.WriteByte(b[0]); err != nil {
 			fmt.Printf("error: %s\n\r", err)
@@ -52,3 +70,4 @@ func main() {
 // tab => 9
 // ctrl+c => 3
 // \n => 13
+// delete => 127
