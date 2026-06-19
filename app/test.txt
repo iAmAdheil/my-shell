@@ -11,3 +11,16 @@ split_test.go
 store.go
 test.txt
 hello
+com_handlers.go
+complete.go
+complete_test.go
+key_handlers.go
+main.go
+normalise.go
+out.go
+raw_com_line.go
+readline_config.go
+split_test.go
+store.go
+test.txt
+utils.go

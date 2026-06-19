@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -139,7 +140,8 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 	// if redirect == 2 -> stderr to file and print stdout message,
 	// ignore the err from proc.wait
 	if len(outFile) > 0 {
-		if redirect == 1 {
+		switch redirect {
+		case 1:
 			wg.Add(1)
 
 			go HandleFileOut(outFile, outScanner, wg, mode)
@@ -147,11 +149,13 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 
 			errstr := <-errstrch
 			if len(errstr) > 0 {
-				return fmt.Errorf("%s\n\r", errstr)
+				// return fmt.Errorf("%s\n\r", errstr)
+				return errors.New(errstr)
 			}
 
 			wg.Wait()
-		} else if redirect == 2 {
+
+		case 2:
 			wg.Add(1)
 
 			go HandleFileOut(outFile, errScanner, wg, mode)
@@ -165,7 +169,8 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 
 		errstr := <-errstrch
 		if len(errstr) > 0 {
-			return fmt.Errorf("%s\n\r", errstr)
+			// return fmt.Errorf("%s\n\r", errstr)
+			return errors.New(errstr)
 		}
 	}
 

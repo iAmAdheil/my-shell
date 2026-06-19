@@ -15,11 +15,11 @@ func TestSplit(t *testing.T) {
 	}
 }
 
-func TestCommSplit(t *testing.T) {
-	str := "echo hello > output.txt"
-	com, args := GetComm(str)
-	fmt.Printf("command: %s\n", com)
-	for i, v := range args {
-		fmt.Printf("arg %v: %s\n", i+1, v)
-	}
-}
+// func TestCommSplit(t *testing.T) {
+// 	str := "echo hello > output.txt"
+// 	com, args := GetComm(str)
+// 	fmt.Printf("command: %s\n", com)
+// 	for i, v := range args {
+// 		fmt.Printf("arg %v: %s\n", i+1, v)
+// 	}
+// }

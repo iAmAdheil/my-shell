@@ -7,7 +7,7 @@ import (
 )
 
 func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
-	// isErr -> collect only, no print
+	// isErr -> collect only, no print, transmit msg via channel
 	var out string
 	for s.Scan() {
 		buf := s.Text()
@@ -18,7 +18,7 @@ func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
 	}
 
 	if err := s.Err(); err != nil {
-		fmt.Errorf("reading from pipe failed: %s\n\r", err)
+		errstrch <- err.Error()
 	}
 
 	if errstrch != nil {
@@ -28,7 +28,8 @@ func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
 
 func HandleFileOut(filepath string, s *bufio.Scanner, wg *sync.WaitGroup, mode int) {
 	if err := handleFileWrite(filepath, s, wg, mode); err != nil {
-		fmt.Errorf("file out failed: %s\n\r", err)
+		panic(err)
+		// fmt.Errorf("file out failed: %s\n\r", err)
 	}
 
 }
