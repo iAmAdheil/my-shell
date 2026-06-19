@@ -96,7 +96,7 @@ func GetComm(com string) (string, []string) {
 }
 
 func main() {
-	l, err := readline.NewEx(config)
+	l, err := readline.NewEx(GetConfig())
 	if err != nil {
 		panic(err)
 	}

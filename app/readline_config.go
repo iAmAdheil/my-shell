@@ -1,19 +1,38 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/chzyer/readline"
 )
 
-var config = &readline.Config{
-	// Prompt:          "\033[31m»\033[0m ",
-	Prompt:          "$ ",
-	HistoryFile:     "/tmp/readline.tmp",
-	AutoComplete:    completer,
-	InterruptPrompt: "^C",
-	EOFPrompt:       "exit",
+type BellNoMatch struct {
+	inner *readline.PrefixCompleter
+}
 
-	HistorySearchFold:   true,
-	FuncFilterInputRune: filterInput,
+func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
+	newLine, offset := bnm.inner.Do(line, pos)
+	if len(newLine) == 0 {
+		fmt.Fprint(os.Stderr, "\a")
+	}
+	return newLine, offset
+}
+
+func GetConfig() *readline.Config {
+	bnm := &BellNoMatch{
+		inner: completer,
+	}
+	return &readline.Config{
+		// Prompt:          "\033[31m»\033[0m ",
+		Prompt:              "$ ",
+		HistoryFile:         "/tmp/readline.tmp",
+		AutoComplete:        bnm,
+		InterruptPrompt:     "^C",
+		EOFPrompt:           "exit",
+		HistorySearchFold:   true,
+		FuncFilterInputRune: filterInput,
+	}
 }
 
 // func usage(w io.Writer) {
