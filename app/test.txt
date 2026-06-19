@@ -24,3 +24,5 @@ split_test.go
 store.go
 test.txt
 utils.go
+Hello David
+Hello Alice
