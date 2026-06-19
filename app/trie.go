@@ -1,6 +1,6 @@
 package main
 
-const count = 26
+const count = 256
 
 type Trienode struct {
 	children [count]*Trienode
@@ -26,7 +26,7 @@ func backtrack_helper(suggs *[]string, tmp *Trienode, sug string) {
 	}
 
 	for i := 0; i < len(tmp.children); i++ {
-		char := string(rune('a' + i))
+		char := string([]byte{byte(i)})
 		if tmp.children[i] != nil {
 			sug += char
 			backtrack_helper(suggs, tmp.children[i], sug)
@@ -40,7 +40,7 @@ func (root *Trienode) Complete(word string) []string {
 	tmp := root
 	sugg := ""
 	for i := 0; i < len(word); i++ {
-		idx := word[i] - 'a'
+		idx := int(word[i])
 		if tmp.children[idx] == nil {
 			return suggs
 		}
@@ -61,7 +61,7 @@ func (root *Trienode) Complete(word string) []string {
 func (root *Trienode) Insert(word string) {
 	tmp := root
 	for i := 0; i < len(word); i++ {
-		idx := word[i] - 'a'
+		idx := int(word[i])
 		if tmp.children[idx] == nil {
 			nNode := &Trienode{
 				children: [count]*Trienode{},
