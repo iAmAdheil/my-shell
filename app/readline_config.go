@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/chzyer/readline"
 )
@@ -27,6 +26,7 @@ func GetConfig() *readline.Config {
 	var completer = readline.NewPrefixCompleter(
 		readline.PcItem("echo"),
 		readline.PcItem("exit"),
+		readline.PcItemDynamic(listBinaries()),
 		// readline.PcItem("mode",
 		//
 		//	readline.PcItem("vi"),
@@ -95,6 +95,17 @@ func GetConfig() *readline.Config {
 // 	}
 // }
 
+func listFiles(path string) func(string) []string {
+	return func(line string) []string {
+		names := make([]string, 0)
+		files, _ := ioutil.ReadDir(path)
+		for _, f := range files {
+			names = append(names, f.Name())
+		}
+		return names
+	}
+}
+
 func filterInput(r rune) (rune, bool) {
 	switch r {
 	// block CtrlZ feature
@@ -104,45 +115,8 @@ func filterInput(r rune) (rune, bool) {
 	return r, true
 }
 
-func searchPath(word string) []string {
-	matches := []string{}
-	path := os.Getenv("PATH")
-	if len(path) == 0 {
-		return matches
-	}
-	dirs := strings.Split(path, ":")
-	for _, dir := range dirs {
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		exes := []string{}
-		for _, file := range files {
-			fileFP := dir + "/" + file.Name()
-			fileInfo, err := os.Stat(fileFP)
-			if err != nil {
-				break
-			}
-			if IsExecAny(fileInfo.Mode().Perm()) { // check file permissions
-				exes = append(exes, file.Name())
-			} else {
-				break
-			}
-		}
-		root := InitTrie(exes)
-		cur_matches := root.Complete(word)
-		matches = append(matches, cur_matches...)
-	}
-	return matches
-}
-
-func listFiles(path string) func(string) []string {
+func listBinaries() func(string) []string {
 	return func(line string) []string {
-		names := make([]string, 0)
-		files, _ := ioutil.ReadDir(path)
-		for _, f := range files {
-			names = append(names, f.Name())
-		}
-		return names
+		return SearchPath(line)
 	}
 }

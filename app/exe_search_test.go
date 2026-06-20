@@ -7,6 +7,6 @@ import (
 
 func TestExeSearch(t *testing.T) {
 	testStr := ".py"
-	matches := searchPath(testStr)
+	matches := SearchPath(testStr)
 	fmt.Println(matches)
 }
