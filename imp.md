@@ -4,6 +4,6 @@ cooked mode -> raw mode
 cooked mode -> \r and \n 
 raw mode -> \n
 
-tries for autocomplete
+tries for autocomplete, common prefix search
 
 instead of building out handlers manually, configure readline that handles everything out of the box
