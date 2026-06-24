@@ -74,3 +74,33 @@ func (root *Trienode) Insert(word string) {
 
 	tmp.terminal = true
 }
+
+func GetComPrefix(suggs []string) string {
+	root := &Trienode{
+		children: [count]*Trienode{},
+		terminal: false,
+	}
+	for _, sug := range suggs {
+		root.Insert(sug)
+	}
+
+	tmp := root
+	pref := []rune{}
+	for {
+		c := 0
+		li := 0
+		for i := 0; i < count; i++ {
+			if tmp.children[i] != nil {
+				c++
+				li = i
+			}
+		}
+		if c == 0 || c > 1 || tmp.terminal {
+			break
+		}
+		pref = append(pref, rune(li))
+		tmp = tmp.children[li]
+	}
+
+	return string(pref)
+}

@@ -26,7 +26,7 @@ func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 	sug := getPathSugg(string(line))
 	if len(sug) > 0 {
 		nr := make([][]rune, 1)
-		r := []rune(sug + " ")
+		r := []rune(sug)
 		nr[0] = r[len(line):]
 		return nr, offset
 	}
@@ -169,10 +169,16 @@ func filterInput(r rune) (rune, bool) {
 
 func getPathSugg(line string) string {
 	suggs := SearchPath(line)
-	if len(suggs) > 1 || len(suggs) == 0 {
+	if len(suggs) == 0 {
 		return ""
+	} else if len(suggs) > 1 {
+		pref := GetComPrefix(suggs)
+		if len(pref) <= len(line) {
+			return ""
+		}
+		return pref
 	}
-	return suggs[0]
+	return suggs[0] + " "
 }
 
 func listPathBinaries(line string) []string {

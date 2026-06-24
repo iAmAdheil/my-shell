@@ -12,3 +12,9 @@ func TestComplete(t *testing.T) {
 	suggs := root.Complete(txt)
 	fmt.Println(suggs)
 }
+
+func TestCommonPrefix(t *testing.T) {
+	words := []string{"xyz_foo", "xyz_foo_bar", "xyz_foo_bar_baz"}
+	pref := GetComPrefix(words)
+	fmt.Println(pref)
+}
