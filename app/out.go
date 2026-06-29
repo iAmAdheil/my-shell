@@ -18,6 +18,7 @@ func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
 	}
 
 	if err := s.Err(); err != nil {
+		fmt.Println(err)
 		errstrch <- err.Error()
 	}
 

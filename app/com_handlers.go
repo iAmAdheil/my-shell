@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -157,16 +159,28 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 
 		case 2:
 			wg.Add(1)
-
+			// to finish scanning from scanner before wait is called
+			// and the internal stdout reader gets closed
+			done := make(chan struct{})
 			go HandleFileOut(outFile, errScanner, wg, mode)
-			go HandlePrintOut(outScanner, nil, false)
-
+			go func() {
+				HandlePrintOut(outScanner, nil, false)
+				close(done)
+			}()
+			<-done
 			wg.Wait()
 		}
 	} else {
-		go HandlePrintOut(outScanner, nil, false)
+		// to finish scanning from scanner before wait is called
+		// and the internal stdout reader gets closed
+		done := make(chan struct{})
+		go func() {
+			HandlePrintOut(outScanner, nil, false)
+			close(done)
+		}()
 		go HandlePrintOut(errScanner, errstrch, true)
 
+		<-done
 		errstr := <-errstrch
 		if len(errstr) > 0 {
 			// return fmt.Errorf("%s\n\r", errstr)
@@ -179,8 +193,70 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 	return nil
 }
 
+func HandleDualComm(c1 string, args1 []string, c2 string, args2 []string) {
+	exeP1 := GetBinaryPath(c1)
+	exeP2 := GetBinaryPath(c2)
+
+	if len(exeP1) == 0 || len(exeP2) == 0 {
+		return
+	}
+
+	proc1 := exec.Command(c1, args1...)
+	proc2 := exec.Command(c2, args2...)
+
+	stdout1, err := proc1.StdoutPipe()
+	if err != nil {
+		return
+	}
+	stdin2, err := proc2.StdinPipe()
+	if err != nil {
+		return
+	}
+	stdout2, err := proc2.StdoutPipe()
+	if err != nil {
+		return
+	}
+
+	if err := proc1.Start(); err != nil {
+		return
+	}
+	if err := proc2.Start(); err != nil {
+		return
+	}
+
+	outScanner2 := bufio.NewScanner(stdout2)
+	done := make(chan struct{})
+	go func() {
+		HandlePrintOut(outScanner2, nil, false)
+		close(done)
+	}()
+
+	if _, err := io.Copy(stdin2, stdout1); err != nil {
+		return
+	}
+
+	stdin2.Close()
+
+	<-done
+	proc1.Wait()
+	proc2.Wait()
+}
+
 func HandleDefault(main string, args []string, filepath string, redirect int, mode int) {
 	if len(main) == 0 {
+		return
+	}
+
+	if slices.Contains(args, "|") {
+		idx := slices.Index(args, "|")
+		if len(args)-1 == idx {
+			return
+		}
+		c1 := main
+		args1 := args[0:idx]
+		c2 := args[idx+1]
+		args2 := args[idx+2:]
+		HandleDualComm(c1, args1, c2, args2)
 		return
 	}
 
