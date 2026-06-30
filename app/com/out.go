@@ -1,4 +1,4 @@
-package main
+package com
 
 import (
 	"bufio"
@@ -32,7 +32,6 @@ func HandleFileOut(filepath string, s *bufio.Scanner, wg *sync.WaitGroup, mode i
 		panic(err)
 		// fmt.Errorf("file out failed: %s\n\r", err)
 	}
-
 }
 
 func handleFileWrite(filepath string, s *bufio.Scanner, wg *sync.WaitGroup, mode int) error {

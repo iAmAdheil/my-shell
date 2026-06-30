@@ -8,7 +8,7 @@ import (
 )
 
 // handles args and vars to handle output redirect
-func RedirectFilter(args []string, mode *int, redirect *int, outFilePath *string) []string {
+func RedirectFilter(args []string, outFilePath *string, redirect *int, mode *int) []string {
 	if len(args) >= 2 {
 		fileArg := args[len(args)-2]
 		if strings.Contains(fileArg, ">") || strings.Contains(fileArg, "1>") || strings.Contains(fileArg, "2>") {
@@ -30,6 +30,7 @@ func RedirectFilter(args []string, mode *int, redirect *int, outFilePath *string
 	return args
 }
 
+// search path for executable exes that match the passed word arg
 func SearchPath(word string) []string {
 	matches := []string{}
 	path := os.Getenv("PATH")

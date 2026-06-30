@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// testing the implemented trie data structure
+
 func TestComplete(t *testing.T) {
 	words := []string{"echo", "exit"}
 	txt := "ech"

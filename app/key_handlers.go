@@ -28,13 +28,13 @@ package main
 // 	}
 // }
 
-var words = []string{"echo", "exit"}
+// var words = []string{"echo", "exit"}
 
-func Tab(text string) string {
-	root := InitTrie(words)
-	suggs := root.Complete(text)
-	if len(suggs) > 0 {
-		return suggs[0] + " "
-	}
-	return ""
-}
+// func Tab(text string) string {
+// 	root := InitTrie(words)
+// 	suggs := root.Complete(text)
+// 	if len(suggs) > 0 {
+// 		return suggs[0] + " "
+// 	}
+// 	return ""
+// }

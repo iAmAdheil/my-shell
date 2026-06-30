@@ -1,4 +1,4 @@
-package main
+package com
 
 import (
 	"bufio"
@@ -8,114 +8,117 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"slices"
 	"strings"
 	"sync"
 )
 
-func HandleExit() {
+func (com *Com) Run() {
+	switch com.Main {
+	case "":
+	case "exit":
+		com.HandleExit()
+	case "echo":
+		com.HandleEcho()
+	case "type":
+		com.HandleType()
+	case "pwd":
+		com.HandlePwd()
+	case "cd":
+		com.HandleCd()
+	default:
+		exePath := GetBinaryPath(com.Main)
+		if len(exePath) > 0 {
+			err := com.RunBinary()
+			if err != nil {
+				// cat: nonexistent: No such file or directory
+				fmt.Printf("%s\n\r", err)
+			}
+		} else {
+			fmt.Printf("%s: command not found\n\r", com.Main)
+		}
+	}
+}
+
+func (com *Com) HandleExit() {
 	os.Exit(0)
 }
 
-func HandlePwd() {
+func (com *Com) HandlePwd() {
 	dir, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("%s\n\r", err)
+		return
 	}
 	fmt.Printf("%s\n\r", dir)
 }
 
-func HandleCd(args []string) {
-	if len(args) == 0 {
+func (com *Com) HandleCd() {
+	if len(com.Args) == 0 {
 		return
 	}
-	path := args[0]
+
+	path := com.Args[0]
 	if path == "~" {
 		path = os.Getenv("HOME")
 	}
+
 	if err := os.Chdir(path); err != nil {
 		fmt.Printf("cd: %s: No such file or directory\n\r", path)
 	}
 }
 
-func HandleEcho(args []string, filepath string, redirect int, mode int) error {
+func (com *Com) HandleEcho() error {
 	wg := &sync.WaitGroup{}
 	var (
-		out     string = strings.Join(args, " ")
-		fileout string = strings.Join(args, " ")
+		out     string = strings.Join(com.Args, " ")
+		fileout string = strings.Join(com.Args, " ")
 	)
-	if redirect == 2 {
+	// stderr does not have any output, but file is created
+	if com.Redirect == 2 {
 		fileout = ""
 	}
-	if len(filepath) > 0 {
+
+	if len(com.OutFilePath) > 0 {
 		wg.Add(1)
+
 		r := bytes.NewBufferString(fileout)
 		s := bufio.NewScanner(r)
-		HandleFileOut(filepath, s, wg, mode)
+		HandleFileOut(com.OutFilePath, s, wg, com.Mode)
+
 		wg.Wait()
 	}
-	if redirect == 0 || redirect == 2 {
+	// print when either no redirect or redirect stderr
+	if com.Redirect == 0 || com.Redirect == 2 {
 		fmt.Printf("%s\n\r", out)
 	}
 
 	return nil
 }
 
-func HandleType(args []string) {
-	// normalised args
-	if len(args) == 0 {
+func (com *Com) HandleType() {
+	if len(com.Args) == 0 {
 		return
 	}
-	com := args[0]
-	switch com {
+
+	m := com.Args[0]
+	switch m {
 	case "exit", "echo", "type", "pwd", "cd":
-		fmt.Printf("%s is a shell builtin\n\r", com)
+		fmt.Printf("%s is a shell builtin\n\r", m)
+
 	default:
-		exePath := GetBinaryPath(com)
-
+		exePath := GetBinaryPath(m)
 		if len(exePath) > 0 {
-			fmt.Printf("%s is %s\n\r", com, exePath)
+			fmt.Printf("%s is %s\n\r", m, exePath)
 		} else {
-			fmt.Printf("%s: not found\n\r", com)
+			fmt.Printf("%s: not found\n\r", m)
 		}
 	}
-}
-
-func GetBinaryPath(filename string) string {
-	path := os.Getenv("PATH")
-	if len(path) == 0 {
-		fmt.Printf("no 'PATH' env variable set\n\r")
-	}
-
-	dirs := strings.Split(path, ":")
-
-	for _, dir := range dirs {
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		for _, file := range files {
-			if file.Name() == filename {
-				fullPath := dir + "/" + filename
-				fileInfo, err := os.Stat(fullPath)
-				if err != nil {
-					break
-				}
-				if IsExecAny(fileInfo.Mode().Perm()) { // check file permissions
-					return fullPath
-				} else {
-					break
-				}
-			}
-		}
-	}
-	return ""
 }
 
 // redirect == 1 -> stdout
 // redirect == 2 -> stderr
-func RunBinary(file string, args []string, outFile string, redirect int, mode int) error {
-	proc := exec.Command(file, args...)
+func (com *Com) RunBinary() error {
+	proc := exec.Command(com.Main, com.Args...)
 
 	stdout, err := proc.StdoutPipe()
 	if err != nil {
@@ -141,12 +144,12 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 	// from chan and ignore the err from proc.wait
 	// if redirect == 2 -> stderr to file and print stdout message,
 	// ignore the err from proc.wait
-	if len(outFile) > 0 {
-		switch redirect {
+	if len(com.OutFilePath) > 0 {
+		switch com.Redirect {
 		case 1:
 			wg.Add(1)
 
-			go HandleFileOut(outFile, outScanner, wg, mode)
+			go HandleFileOut(com.OutFilePath, outScanner, wg, com.Mode)
 			go HandlePrintOut(errScanner, errstrch, true)
 
 			errstr := <-errstrch
@@ -162,7 +165,7 @@ func RunBinary(file string, args []string, outFile string, redirect int, mode in
 			// to finish scanning from scanner before wait is called
 			// and the internal stdout reader gets closed
 			done := make(chan struct{})
-			go HandleFileOut(outFile, errScanner, wg, mode)
+			go HandleFileOut(com.OutFilePath, errScanner, wg, com.Mode)
 			go func() {
 				HandlePrintOut(outScanner, nil, false)
 				close(done)
@@ -240,35 +243,4 @@ func HandleDualComm(c1 string, args1 []string, c2 string, args2 []string) {
 	<-done
 	proc1.Wait()
 	proc2.Wait()
-}
-
-func HandleDefault(main string, args []string, filepath string, redirect int, mode int) {
-	if len(main) == 0 {
-		return
-	}
-
-	if slices.Contains(args, "|") {
-		idx := slices.Index(args, "|")
-		if len(args)-1 == idx {
-			return
-		}
-		c1 := main
-		args1 := args[0:idx]
-		c2 := args[idx+1]
-		args2 := args[idx+2:]
-		HandleDualComm(c1, args1, c2, args2)
-		return
-	}
-
-	exePath := GetBinaryPath(main)
-
-	if len(exePath) > 0 {
-		err := RunBinary(main, args, filepath, redirect, mode)
-		if err != nil {
-			// cat: nonexistent: No such file or directory
-			fmt.Printf("%s\n\r", err)
-		}
-	} else {
-		fmt.Printf("%s: command not found\n\r", main)
-	}
 }

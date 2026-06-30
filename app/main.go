@@ -1,83 +1,3 @@
-// // "hello"  "script's"  test""example -> test on this
-// package main
-
-// import (
-// 	"fmt"
-// 	"os"
-
-// 	"github.com/chzyer/readline"
-// 	"golang.org/x/term"
-// )
-
-// func main() {
-// 	oldState := EnableRaw()
-// 	defer term.Restore(int(os.Stdin.Fd()), oldState)
-
-// 	rl, err := readline.New("> ")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer rl.Close()
-
-// 	for {
-// 		line, err := rl.Readline()
-// 		if err != nil { // io.EOF
-// 			break
-// 		}
-// 		fmt.Printf("%s\n\r", line)
-// 	}
-
-// 	// cl := NewComLineTxt()
-// 	// ks := make([]byte, 5) // key stroke store
-
-// 	// fmt.Printf("$ ")
-
-// 	// for {
-// 	// 	n, err := os.Stdin.Read(ks)
-// 	// 	if err != nil {
-// 	// 		fmt.Printf("error: %s\n\r", err)
-// 	// 		break
-// 	// 	}
-
-// 	// 	// fmt.Printf("%v %v\n\r", n, ks)
-// 	// 	com := cl.text.String()
-
-// 	// 	if n == 1 && ks[0] == 3 { // ctrl+c
-// 	// 		break
-// 	// 	} else if n == 3 && ks[0] == 27 && ks[1] == 91 && ks[2] == 65 {
-// 	// 		// break
-// 	// 	} else if n == 3 && ks[0] == 27 && ks[1] == 91 && ks[2] == 66 {
-// 	// 		// break
-// 	// 	} else if n == 3 && ks[0] == 27 && ks[1] == 91 && ks[2] == 67 {
-// 	// 		// break
-// 	// 	} else if n == 3 && ks[0] == 27 && ks[1] == 91 && ks[2] == 68 {
-// 	// 		// break
-// 	// 	} else if n == 1 && ks[0] == 9 { // ctrl+c
-// 	// 		sug := Tab(com)
-// 	// 		if len(sug) == 0 {
-// 	// 			continue
-// 	// 		}
-// 	// 		cl.Clear()
-// 	// 		nb := []byte(sug)
-// 	// 		cl.Write(nb, len(nb))
-// 	// 	} else if n == 1 && ks[0] == 13 { // return (or enter)
-// 	// 		Return(com)
-// 	// 		cl.Clear()
-// 	// 		fmt.Printf("$ ")
-// 	// 	} else if n == 1 && ks[0] == 127 { // delete
-// 	// 		cl.Delete()
-// 	// 		continue
-// 	// 	} else {
-// 	// 		cl.Write(ks, n)
-// 	// 	}
-// 	// }
-// }
-
-// // tab => 9
-// // ctrl+c => 3
-// // \n => 13
-// // delete => 127
-
 package main
 
 import (
@@ -85,7 +5,13 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/codecrafters-io/shell-starter-go/app/com"
 )
+
+func GetComms(txt string) []string {
+	txt = strings.TrimSpace(txt)
+	return strings.Split(txt, " | ")
+}
 
 func GetComm(com string) (string, []string) {
 	commParts := SplitComm(com)
@@ -103,9 +29,9 @@ func main() {
 	defer l.Close()
 
 	for {
-		com, err := l.Readline()
+		txt, err := l.Readline()
 		if err == readline.ErrInterrupt {
-			if len(com) == 0 {
+			if len(txt) == 0 {
 				break
 			} else {
 				continue
@@ -114,29 +40,36 @@ func main() {
 			break
 		}
 
-		com = strings.TrimSpace(com)
-		main, args := GetComm(com)
-		var (
-			outFilePath string
-			redirect    int = 0
-			mode        int = 0
-		)
-		// filter out args without the redirect
-		args = RedirectFilter(args, &mode, &redirect, &outFilePath)
-		switch main {
-		case "":
-		case "exit":
-			HandleExit()
-		case "echo":
-			HandleEcho(args, outFilePath, redirect, mode)
-		case "type":
-			HandleType(args)
-		case "pwd":
-			HandlePwd()
-		case "cd":
-			HandleCd(args)
-		default:
-			HandleDefault(main, args, outFilePath, redirect, mode)
+		comms := GetComms(txt)
+
+		for _, ct := range comms {
+			main, args := GetComm(ct) // normalise args, and extract main query
+
+			var (
+				outFilePath string // output file path
+				// print or redirect to file (stdout or stderr)
+				// 0 -> normal print
+				// 1 -> stdout to file
+				// 2 -> stderr to file
+				redirect int = 0
+				// 0 -> overwrite
+				// 1 -> append
+				mode int = 0 // append or overwrite
+			)
+
+			// filter out args without the redirect args
+			args = RedirectFilter(args, &outFilePath, &redirect, &mode)
+
+			com := &com.Com{
+				Main:        main,
+				Args:        args,
+				OutFilePath: outFilePath,
+				Redirect:    redirect,
+				Mode:        mode,
+			}
+
+			com.Run()
+
 			// case strings.HasPrefix(line, "mode "):
 			// 	switch line[5:] {
 			// 	case "vi":

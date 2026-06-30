@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+// test command split, (@iAmAdheil) needs rework here
+
 func TestSplit(t *testing.T) {
 	// str := "\"/tmp/ant/f 60\" \"/tmp/ant/f   54\" \"/tmp/ant/f's98\""
 	str := "cat /tmp/foo/file | wc"

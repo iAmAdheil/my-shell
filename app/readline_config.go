@@ -145,17 +145,6 @@ func GetConfig() *readline.Config {
 //  }
 // }
 
-func listFiles(path string) func(string) []string {
-	return func(line string) []string {
-		names := make([]string, 0)
-		files, _ := ioutil.ReadDir(path)
-		for _, f := range files {
-			names = append(names, f.Name())
-		}
-		return names
-	}
-}
-
 func filterInput(r rune) (rune, bool) {
 	switch r {
 	// block CtrlZ feature
@@ -167,6 +156,7 @@ func filterInput(r rune) (rune, bool) {
 	return r, true
 }
 
+// tab handler
 func getPathSugg(line string) string {
 	suggs := SearchPath(line)
 	if len(suggs) == 0 {
@@ -181,7 +171,19 @@ func getPathSugg(line string) string {
 	return suggs[0] + " "
 }
 
+// tab handler
 func listPathBinaries(line string) []string {
 	suggs := SearchPath(line)
 	return suggs
+}
+
+func listFiles(path string) func(string) []string {
+	return func(line string) []string {
+		names := make([]string, 0)
+		files, _ := ioutil.ReadDir(path)
+		for _, f := range files {
+			names = append(names, f.Name())
+		}
+		return names
+	}
 }
