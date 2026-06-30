@@ -3,9 +3,7 @@ package com
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -120,127 +118,40 @@ func (com *Com) HandleType() {
 func (com *Com) RunBinary() error {
 	proc := exec.Command(com.Main, com.Args...)
 
-	stdout, err := proc.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	stderr, err := proc.StderrPipe()
-	if err != nil {
-		return err
+	// if redirect == 1 -> stdout to file and print stderr message
+	// if redirect == 2 -> stderr to file and print stdout message,
+	if len(com.OutFilePath) > 0 {
+		switch com.Redirect {
+		case 1:
+			file, err := OpenFile(com.OutFilePath, com.Mode)
+			if err != nil {
+				panic(err)
+			}
+			defer file.Close()
+
+			proc.Stdout = file
+			proc.Stderr = com.Stdin
+
+		case 2:
+			file, err := OpenFile(com.OutFilePath, com.Mode)
+			if err != nil {
+				panic(err)
+			}
+			defer file.Close()
+
+			proc.Stdout = com.Stdin
+			proc.Stderr = file
+		}
+	} else {
+		proc.Stdout = com.Stdin
+		proc.Stderr = com.Stdin
 	}
 
 	if err := proc.Start(); err != nil {
 		return err
 	}
 
-	var (
-		wg         *sync.WaitGroup = &sync.WaitGroup{}
-		errstrch   chan string     = make(chan string)
-		outScanner *bufio.Scanner  = bufio.NewScanner(stdout)
-		errScanner *bufio.Scanner  = bufio.NewScanner(stderr)
-	)
-
-	// if redirect == 1 -> stdout to file and print stderr message
-	// from chan and ignore the err from proc.wait
-	// if redirect == 2 -> stderr to file and print stdout message,
-	// ignore the err from proc.wait
-	if len(com.OutFilePath) > 0 {
-		switch com.Redirect {
-		case 1:
-			wg.Add(1)
-
-			go HandleFileOut(com.OutFilePath, outScanner, wg, com.Mode)
-			go HandlePrintOut(errScanner, errstrch, true)
-
-			errstr := <-errstrch
-			if len(errstr) > 0 {
-				// return fmt.Errorf("%s\n\r", errstr)
-				return errors.New(errstr)
-			}
-
-			wg.Wait()
-
-		case 2:
-			wg.Add(1)
-			// to finish scanning from scanner before wait is called
-			// and the internal stdout reader gets closed
-			done := make(chan struct{})
-			go HandleFileOut(com.OutFilePath, errScanner, wg, com.Mode)
-			go func() {
-				HandlePrintOut(outScanner, nil, false)
-				close(done)
-			}()
-			<-done
-			wg.Wait()
-		}
-	} else {
-		// to finish scanning from scanner before wait is called
-		// and the internal stdout reader gets closed
-		done := make(chan struct{})
-		go func() {
-			HandlePrintOut(outScanner, nil, false)
-			close(done)
-		}()
-		go HandlePrintOut(errScanner, errstrch, true)
-
-		<-done
-		errstr := <-errstrch
-		if len(errstr) > 0 {
-			// return fmt.Errorf("%s\n\r", errstr)
-			return errors.New(errstr)
-		}
-	}
-
 	// ignore err from proc, handled by stderr pipe
 	proc.Wait()
 	return nil
-}
-
-func HandleDualComm(c1 string, args1 []string, c2 string, args2 []string) {
-	exeP1 := GetBinaryPath(c1)
-	exeP2 := GetBinaryPath(c2)
-
-	if len(exeP1) == 0 || len(exeP2) == 0 {
-		return
-	}
-
-	proc1 := exec.Command(c1, args1...)
-	proc2 := exec.Command(c2, args2...)
-
-	stdout1, err := proc1.StdoutPipe()
-	if err != nil {
-		return
-	}
-	stdin2, err := proc2.StdinPipe()
-	if err != nil {
-		return
-	}
-	stdout2, err := proc2.StdoutPipe()
-	if err != nil {
-		return
-	}
-
-	if err := proc1.Start(); err != nil {
-		return
-	}
-	if err := proc2.Start(); err != nil {
-		return
-	}
-
-	outScanner2 := bufio.NewScanner(stdout2)
-	done := make(chan struct{})
-	go func() {
-		HandlePrintOut(outScanner2, nil, false)
-		close(done)
-	}()
-
-	if _, err := io.Copy(stdin2, stdout1); err != nil {
-		return
-	}
-
-	stdin2.Close()
-
-	<-done
-	proc1.Wait()
-	proc2.Wait()
 }

@@ -29,8 +29,8 @@ func HandlePrintOut(s *bufio.Scanner, errstrch chan string, isErr bool) {
 
 func HandleFileOut(filepath string, s *bufio.Scanner, wg *sync.WaitGroup, mode int) {
 	if err := handleFileWrite(filepath, s, wg, mode); err != nil {
-		panic(err)
 		// fmt.Errorf("file out failed: %s\n\r", err)
+		panic(err)
 	}
 }
 
