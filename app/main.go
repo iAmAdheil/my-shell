@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"os"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -42,8 +43,26 @@ func main() {
 
 		comms := GetComms(txt)
 
-		for _, ct := range comms {
+		var in io.Reader = nil
+
+		for i, _ := range comms {
+			ct := comms[i]
 			main, args := GetComm(ct) // normalise args, and extract main query
+
+			pr, pw, err := os.Pipe()
+			if err != nil {
+				panic(err)
+			}
+
+			var (
+				out   io.WriteCloser = pw
+				close bool           = true
+			)
+			// last command prints to terminal
+			if i == len(comms)-1 {
+				out = os.Stdout
+				close = false
+			}
 
 			var (
 				outFilePath string // output file path
@@ -63,12 +82,18 @@ func main() {
 			com := &com.Com{
 				Main:        main,
 				Args:        args,
+				In:          in,
+				Out:         out,
 				OutFilePath: outFilePath,
 				Redirect:    redirect,
 				Mode:        mode,
+				Close:       close,
 			}
 
 			com.Run()
+			// pass current com's pr to next com,
+			// to read whatever is added via pw
+			in = pr
 
 			// case strings.HasPrefix(line, "mode "):
 			// 	switch line[5:] {

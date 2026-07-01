@@ -35,6 +35,13 @@ func (com *Com) Run() {
 			fmt.Printf("%s: command not found\n\r", com.Main)
 		}
 	}
+
+	if com.Close {
+		err := com.Out.Close()
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (com *Com) HandleExit() {
@@ -44,10 +51,10 @@ func (com *Com) HandleExit() {
 func (com *Com) HandlePwd() {
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("%s\n\r", err)
+		fmt.Fprintf(com.Out, "%s\n\r", err)
 		return
 	}
-	fmt.Printf("%s\n\r", dir)
+	fmt.Fprintf(com.Out, "%s\n\r", dir)
 }
 
 func (com *Com) HandleCd() {
@@ -61,7 +68,7 @@ func (com *Com) HandleCd() {
 	}
 
 	if err := os.Chdir(path); err != nil {
-		fmt.Printf("cd: %s: No such file or directory\n\r", path)
+		fmt.Fprintf(com.Out, "cd: %s: No such file or directory\n\r", path)
 	}
 }
 
@@ -87,7 +94,7 @@ func (com *Com) HandleEcho() error {
 	}
 	// print when either no redirect or redirect stderr
 	if com.Redirect == 0 || com.Redirect == 2 {
-		fmt.Printf("%s\n\r", out)
+		fmt.Fprintf(com.Out, "%s\n\r", out)
 	}
 
 	return nil
@@ -101,14 +108,14 @@ func (com *Com) HandleType() {
 	m := com.Args[0]
 	switch m {
 	case "exit", "echo", "type", "pwd", "cd":
-		fmt.Printf("%s is a shell builtin\n\r", m)
+		fmt.Fprintf(com.Out, "%s is a shell builtin\n\r", m)
 
 	default:
 		exePath := GetBinaryPath(m)
 		if len(exePath) > 0 {
-			fmt.Printf("%s is %s\n\r", m, exePath)
+			fmt.Fprintf(com.Out, "%s is %s\n\r", m, exePath)
 		} else {
-			fmt.Printf("%s: not found\n\r", m)
+			fmt.Fprintf(com.Out, "%s: not found\n\r", m)
 		}
 	}
 }
@@ -117,6 +124,8 @@ func (com *Com) HandleType() {
 // redirect == 2 -> stderr
 func (com *Com) RunBinary() error {
 	proc := exec.Command(com.Main, com.Args...)
+
+	proc.Stdin = com.In
 
 	// if redirect == 1 -> stdout to file and print stderr message
 	// if redirect == 2 -> stderr to file and print stdout message,
@@ -130,7 +139,7 @@ func (com *Com) RunBinary() error {
 			defer file.Close()
 
 			proc.Stdout = file
-			proc.Stderr = com.Stdin
+			proc.Stderr = com.Out
 
 		case 2:
 			file, err := OpenFile(com.OutFilePath, com.Mode)
@@ -139,12 +148,12 @@ func (com *Com) RunBinary() error {
 			}
 			defer file.Close()
 
-			proc.Stdout = com.Stdin
+			proc.Stdout = com.Out
 			proc.Stderr = file
 		}
 	} else {
-		proc.Stdout = com.Stdin
-		proc.Stderr = com.Stdin
+		proc.Stdout = com.Out
+		proc.Stderr = com.Out
 	}
 
 	if err := proc.Start(); err != nil {

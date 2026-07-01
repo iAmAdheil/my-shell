@@ -5,8 +5,8 @@ import "io"
 type Com struct {
 	Main        string
 	Args        []string
-	Stdin       io.WriteCloser
-	Stdout      io.ReadCloser
+	In          io.Reader
+	Out         io.WriteCloser
 	OutFilePath string // output file path
 	// print or redirect to file (stdout or stderr)
 	// 0 -> normal print
@@ -15,5 +15,6 @@ type Com struct {
 	Redirect int
 	// 0 -> overwrite
 	// 1 -> append
-	Mode int // append or overwrite
+	Mode  int  // append or overwrite
+	Close bool // check to manually close the write end of pipe except when os.Stdout
 }
