@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -44,6 +45,7 @@ func main() {
 		comms := GetComms(txt)
 
 		var in io.Reader = nil
+		var running []*com.Com
 
 		for i, _ := range comms {
 			ct := comms[i]
@@ -82,6 +84,7 @@ func main() {
 			com := &com.Com{
 				Main:        main,
 				Args:        args,
+				Proc:        exec.Command(main, args...),
 				In:          in,
 				Out:         out,
 				OutFilePath: outFilePath,
@@ -94,55 +97,60 @@ func main() {
 			// pass current com's pr to next com,
 			// to read whatever is added via pw
 			in = pr
-
-			// case strings.HasPrefix(line, "mode "):
-			// 	switch line[5:] {
-			// 	case "vi":
-			// 		l.SetVimMode(true)
-			// 	case "emacs":
-			// 		l.SetVimMode(false)
-			// 	default:
-			// 		println("invalid mode:", line[5:])
-			// 	}
-			// case line == "mode":
-			// 	if l.IsVimMode() {
-			// 		println("current mode: vim")
-			// 	} else {
-			// 		println("current mode: emacs")
-			// 	}
-			// case line == "login":
-			// 	pswd, err := l.ReadPassword("please enter your password: ")
-			// 	if err != nil {
-			// 		break
-			// 	}
-			// 	println("you enter:", strconv.Quote(string(pswd)))
-			// case line == "help":
-			// 	usage(l.Stderr())
-			// case strings.HasPrefix(line, "setprompt"):
-			// 	if len(line) <= 10 {
-			// 		log.Println("setprompt <prompt>")
-			// 		break
-			// 	}
-			// 	l.SetPrompt(line[10:])
-			// case strings.HasPrefix(line, "say"):
-			// 	line := strings.TrimSpace(line[3:])
-			// 	if len(line) == 0 {
-			// 		log.Println("say what?")
-			// 		break
-			// 	}
-			// 	go func() {
-			// 		for range time.Tick(time.Second) {
-			// 			log.Println(line)
-			// 		}
-			// 	}()
-			// case line == "bye":
-			// 	goto exit
-			// case line == "sleep":
-			// 	log.Println("sleep 4 second")
-			// 	time.Sleep(4 * time.Second)
-			// default:
-			// 	log.Println("you said:", strconv.Quote(line))
+			running = append(running, com)
 		}
+
+		for _, com := range running {
+			com.Stop()
+		}
+
+		// case strings.HasPrefix(line, "mode "):
+		// 	switch line[5:] {
+		// 	case "vi":
+		// 		l.SetVimMode(true)
+		// 	case "emacs":
+		// 		l.SetVimMode(false)
+		// 	default:
+		// 		println("invalid mode:", line[5:])
+		// 	}
+		// case line == "mode":
+		// 	if l.IsVimMode() {
+		// 		println("current mode: vim")
+		// 	} else {
+		// 		println("current mode: emacs")
+		// 	}
+		// case line == "login":
+		// 	pswd, err := l.ReadPassword("please enter your password: ")
+		// 	if err != nil {
+		// 		break
+		// 	}
+		// 	println("you enter:", strconv.Quote(string(pswd)))
+		// case line == "help":
+		// 	usage(l.Stderr())
+		// case strings.HasPrefix(line, "setprompt"):
+		// 	if len(line) <= 10 {
+		// 		log.Println("setprompt <prompt>")
+		// 		break
+		// 	}
+		// 	l.SetPrompt(line[10:])
+		// case strings.HasPrefix(line, "say"):
+		// 	line := strings.TrimSpace(line[3:])
+		// 	if len(line) == 0 {
+		// 		log.Println("say what?")
+		// 		break
+		// 	}
+		// 	go func() {
+		// 		for range time.Tick(time.Second) {
+		// 			log.Println(line)
+		// 		}
+		// 	}()
+		// case line == "bye":
+		// 	goto exit
+		// case line == "sleep":
+		// 	log.Println("sleep 4 second")
+		// 	time.Sleep(4 * time.Second)
+		// default:
+		// 	log.Println("you said:", strconv.Quote(line))
 	}
 	// exit:
 }

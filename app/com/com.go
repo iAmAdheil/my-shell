@@ -1,10 +1,14 @@
 package com
 
-import "io"
+import (
+	"io"
+	"os/exec"
+)
 
 type Com struct {
 	Main        string
 	Args        []string
+	Proc        *exec.Cmd
 	In          io.Reader
 	Out         io.WriteCloser
 	OutFilePath string // output file path

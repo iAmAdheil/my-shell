@@ -26,3 +26,9 @@ func TestCommSplit(t *testing.T) {
 		fmt.Printf("arg %v: %s\n", i+1, v)
 	}
 }
+
+func TestCommNormalise(t *testing.T) {
+	com := `echo -e "1. grape banana\n2. apple pear\n3. mango pineapple" > "/tmp/pig/file-89"`
+	res := NormaliseComm(com)
+	fmt.Println(res)
+}

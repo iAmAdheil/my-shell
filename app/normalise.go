@@ -49,7 +49,7 @@ func NormaliseComm(str string) []string {
 			for ; j < len(str); j++ {
 				if str[j] == '"' {
 					break
-				} else if str[j] == '\\' {
+				} else if str[j] == '\\' && (str[j+1] == '\\' || str[j+1] == '"' || str[j+1] == '$' || str[j+1] == '`') {
 					temp = append(temp, str[j+1])
 					// only increment once as loop will also increment j
 					j += 1

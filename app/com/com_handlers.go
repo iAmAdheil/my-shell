@@ -5,10 +5,21 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 )
+
+func (com *Com) Stop() {
+	// wait only unblocks when both the ends for the write end of a pipe close
+	// when previous proc's wait unblocks and com.Close runs
+	com.Proc.Wait()
+	if com.Close {
+		err := com.Out.Close()
+		if err != nil {
+			panic(err)
+		}
+	}
+}
 
 func (com *Com) Run() {
 	switch com.Main {
@@ -29,17 +40,10 @@ func (com *Com) Run() {
 			err := com.RunBinary()
 			if err != nil {
 				// cat: nonexistent: No such file or directory
-				fmt.Printf("%s\n\r", err)
+				fmt.Printf("%s\n", err)
 			}
 		} else {
-			fmt.Printf("%s: command not found\n\r", com.Main)
-		}
-	}
-
-	if com.Close {
-		err := com.Out.Close()
-		if err != nil {
-			panic(err)
+			fmt.Printf("%s: command not found\n", com.Main)
 		}
 	}
 }
@@ -51,10 +55,10 @@ func (com *Com) HandleExit() {
 func (com *Com) HandlePwd() {
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintf(com.Out, "%s\n\r", err)
+		fmt.Fprintf(com.Out, "%s\n", err)
 		return
 	}
-	fmt.Fprintf(com.Out, "%s\n\r", dir)
+	fmt.Fprintf(com.Out, "%s\n", dir)
 }
 
 func (com *Com) HandleCd() {
@@ -68,16 +72,27 @@ func (com *Com) HandleCd() {
 	}
 
 	if err := os.Chdir(path); err != nil {
-		fmt.Fprintf(com.Out, "cd: %s: No such file or directory\n\r", path)
+		fmt.Fprintf(com.Out, "cd: %s: No such file or directory\n", path)
 	}
 }
 
 func (com *Com) HandleEcho() error {
 	wg := &sync.WaitGroup{}
+
+	var txt string
+
+	if com.Args[0] == "-e" {
+		txt = strings.Join(com.Args[1:], " ")
+		txt = strings.ReplaceAll(txt, `\n`, "\n")
+	} else {
+		txt = strings.Join(com.Args, " ")
+	}
+
 	var (
-		out     string = strings.Join(com.Args, " ")
-		fileout string = strings.Join(com.Args, " ")
+		out     string = txt
+		fileout string = txt
 	)
+
 	// stderr does not have any output, but file is created
 	if com.Redirect == 2 {
 		fileout = ""
@@ -93,8 +108,8 @@ func (com *Com) HandleEcho() error {
 		wg.Wait()
 	}
 	// print when either no redirect or redirect stderr
-	if com.Redirect == 0 || com.Redirect == 2 {
-		fmt.Fprintf(com.Out, "%s\n\r", out)
+	if (com.Redirect == 0 || com.Redirect == 2) || com.Close {
+		fmt.Fprintf(com.Out, "%s\n", out)
 	}
 
 	return nil
@@ -108,14 +123,14 @@ func (com *Com) HandleType() {
 	m := com.Args[0]
 	switch m {
 	case "exit", "echo", "type", "pwd", "cd":
-		fmt.Fprintf(com.Out, "%s is a shell builtin\n\r", m)
+		fmt.Fprintf(com.Out, "%s is a shell builtin\n", m)
 
 	default:
 		exePath := GetBinaryPath(m)
 		if len(exePath) > 0 {
-			fmt.Fprintf(com.Out, "%s is %s\n\r", m, exePath)
+			fmt.Fprintf(com.Out, "%s is %s\n", m, exePath)
 		} else {
-			fmt.Fprintf(com.Out, "%s: not found\n\r", m)
+			fmt.Fprintf(com.Out, "%s: not found\n", m)
 		}
 	}
 }
@@ -123,44 +138,32 @@ func (com *Com) HandleType() {
 // redirect == 1 -> stdout
 // redirect == 2 -> stderr
 func (com *Com) RunBinary() error {
-	proc := exec.Command(com.Main, com.Args...)
-
-	proc.Stdin = com.In
+	com.Proc.Stdin = com.In
 
 	// if redirect == 1 -> stdout to file and print stderr message
 	// if redirect == 2 -> stderr to file and print stdout message,
 	if len(com.OutFilePath) > 0 {
+		file, err := OpenFile(com.OutFilePath, com.Mode)
+		if err != nil {
+			panic(err)
+		}
+
 		switch com.Redirect {
 		case 1:
-			file, err := OpenFile(com.OutFilePath, com.Mode)
-			if err != nil {
-				panic(err)
-			}
-			defer file.Close()
-
-			proc.Stdout = file
-			proc.Stderr = com.Out
-
+			com.Proc.Stdout = file
+			com.Proc.Stderr = com.Out
 		case 2:
-			file, err := OpenFile(com.OutFilePath, com.Mode)
-			if err != nil {
-				panic(err)
-			}
-			defer file.Close()
-
-			proc.Stdout = com.Out
-			proc.Stderr = file
+			com.Proc.Stdout = com.Out
+			com.Proc.Stderr = file
 		}
 	} else {
-		proc.Stdout = com.Out
-		proc.Stderr = com.Out
+		com.Proc.Stdout = com.Out
+		com.Proc.Stderr = com.Out
 	}
 
-	if err := proc.Start(); err != nil {
+	if err := com.Proc.Start(); err != nil {
 		return err
 	}
 
-	// ignore err from proc, handled by stderr pipe
-	proc.Wait()
 	return nil
 }
