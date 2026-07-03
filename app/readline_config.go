@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/chzyer/readline"
+	"github.com/codecrafters-io/shell-starter-go/app/com"
 )
 
 // implements the readline.AutoCompleter interface
@@ -119,7 +120,7 @@ func GetConfig() *readline.Config {
 		Prompt:          "$ ",
 		Listener:        &MyListener{},
 		AutoComplete:    bnm,
-		HistoryFile:     "/tmp/readline.tmp",
+		HistoryFile:     com.HISTORY_FILE,
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
 

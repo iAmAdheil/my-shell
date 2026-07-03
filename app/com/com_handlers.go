@@ -34,6 +34,8 @@ func (com *Com) Run() {
 		com.HandlePwd()
 	case "cd":
 		com.HandleCd()
+	case "history":
+		com.HandleHistory()
 	default:
 		exePath := GetBinaryPath(com.Main)
 		if len(exePath) > 0 {
@@ -74,6 +76,25 @@ func (com *Com) HandleCd() {
 	if err := os.Chdir(path); err != nil {
 		fmt.Fprintf(com.Out, "cd: %s: No such file or directory\n", path)
 	}
+}
+
+func (com *Com) HandleHistory() error {
+	file, err := OpenFile(HISTORY_FILE, 0)
+	if err != nil {
+		return fmt.Errorf("history logs could not be opened: %v", err)
+	}
+	defer file.Close()
+
+	i := 1
+	sc := bufio.NewScanner(file)
+	var txt string
+	for sc.Scan() {
+		txt = sc.Text()
+		fmt.Fprintf(com.Out, "%v: %s\n", i, txt)
+		i++
+	}
+
+	return nil
 }
 
 func (com *Com) HandleEcho() error {
@@ -122,7 +143,7 @@ func (com *Com) HandleType() {
 
 	m := com.Args[0]
 	switch m {
-	case "exit", "echo", "type", "pwd", "cd":
+	case "exit", "echo", "type", "pwd", "cd", "history":
 		fmt.Fprintf(com.Out, "%s is a shell builtin\n", m)
 
 	default:
