@@ -42,6 +42,7 @@ func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 
 var (
 	checkPath bool = false
+	second    bool = false
 )
 
 type MyListener struct{}
@@ -50,12 +51,10 @@ func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, 
 	// obstructs logs from query execution
 	// returning true prints prompt
 	// return false when "return" is pressed
-	// fmt.Println("\n", prevTab, checkPath)
-	// fmt.Println("\n", key)
 	if key == 13 || key == 10 {
 		return line, pos, false
 	}
-	if checkPath && key == 9 {
+	if checkPath && second && key == 9 {
 		suggs := listPathBinaries(string(line))
 		slices.Sort(suggs)
 		if len(suggs) > 0 {
@@ -65,8 +64,15 @@ func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, 
 			}
 			fmt.Printf("\n")
 		}
-	} else {
+	}
+
+	if !second && key == 9 {
+		second = true
+	}
+
+	if key != 9 {
 		checkPath = false
+		second = false
 	}
 	return line, pos, true
 }
