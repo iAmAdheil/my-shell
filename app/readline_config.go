@@ -151,8 +151,6 @@ func filterInput(r rune) (rune, bool) {
 	// block CtrlZ feature
 	case readline.CharCtrlZ:
 		return r, false
-	case readline.CharTab:
-		return r, true
 	}
 	return r, true
 }
