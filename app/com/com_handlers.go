@@ -90,7 +90,7 @@ func (com *Com) HandleHistory() error {
 	var txt string
 	for sc.Scan() {
 		txt = sc.Text()
-		fmt.Fprintf(com.Out, "%v: %s\n", i, txt)
+		fmt.Fprintf(com.Out, "%v %s\n", i, txt)
 		i++
 	}
 
