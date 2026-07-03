@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -78,20 +79,46 @@ func (com *Com) HandleCd() {
 	}
 }
 
-func (com *Com) HandleHistory() error {
-	file, err := OpenFile(HISTORY_FILE, 0)
-	if err != nil {
-		return fmt.Errorf("history logs could not be opened: %v", err)
-	}
-	defer file.Close()
+var History []string
 
-	i := 1
-	sc := bufio.NewScanner(file)
-	var txt string
-	for sc.Scan() {
-		txt = sc.Text()
-		fmt.Fprintf(com.Out, "%v %s\n", i, txt)
-		i++
+func (com *Com) HandleHistory() error {
+	// file, err := OpenFile(HISTORY_FILE, 0)
+	// if err != nil {
+	// 	return fmt.Errorf("history logs could not be opened: %v", err)
+	// }
+	// defer file.Close()
+
+	var lines []string = History
+
+	// sc := bufio.NewScanner(file)
+
+	// for sc.Scan() {
+	// 	txt := sc.Text()
+	// 	lines = append(lines, txt)
+	// }
+
+	if len(com.Args) > 0 {
+		switch {
+		default:
+			c, err := strconv.Atoi(com.Args[0])
+			if err != nil || c < 0 {
+				goto def
+			}
+
+			for i, line := range lines {
+				if i >= len(lines)-c {
+					fmt.Fprintf(com.Out, "%v %s\n", i+1, line)
+				}
+
+			}
+
+			return nil
+		}
+	}
+
+def:
+	for i, line := range lines {
+		fmt.Fprintf(com.Out, "%v %s\n", i+1, line)
 	}
 
 	return nil

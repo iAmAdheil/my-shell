@@ -42,6 +42,8 @@ func main() {
 			break
 		}
 
+		com.History = append(com.History, txt)
+
 		comms := GetComms(txt)
 
 		var in io.Reader = nil
