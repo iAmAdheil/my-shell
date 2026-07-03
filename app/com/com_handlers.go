@@ -82,23 +82,30 @@ func (com *Com) HandleCd() {
 var History []string
 
 func (com *Com) HandleHistory() error {
-	// file, err := OpenFile(HISTORY_FILE, 0)
-	// if err != nil {
-	// 	return fmt.Errorf("history logs could not be opened: %v", err)
-	// }
-	// defer file.Close()
-
 	var lines []string = History
-
-	// sc := bufio.NewScanner(file)
-
-	// for sc.Scan() {
-	// 	txt := sc.Text()
-	// 	lines = append(lines, txt)
-	// }
 
 	if len(com.Args) > 0 {
 		switch {
+		case com.Args[0] == "-r":
+			filename := com.Args[1]
+			if len(filename) == 0 {
+				goto def
+			}
+
+			file, err := OpenFile(filename, 0)
+			if err != nil {
+				return fmt.Errorf("history logs could not be opened: %v", err)
+			}
+			defer file.Close()
+
+			sc := bufio.NewScanner(file)
+
+			for sc.Scan() {
+				txt := sc.Text()
+				History = append(History, txt)
+			}
+
+			return nil
 		default:
 			c, err := strconv.Atoi(com.Args[0])
 			if err != nil || c < 0 {
