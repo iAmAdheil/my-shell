@@ -1,3 +1,4 @@
-echo hello world
-echo hello
 cat test.txt
+hello world
+echo adheil
+history -w test.txt

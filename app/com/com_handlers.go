@@ -92,20 +92,14 @@ func (com *Com) HandleHistory() error {
 				goto def
 			}
 
-			file, err := OpenFile(filename, 0)
-			if err != nil {
-				return fmt.Errorf("history logs could not be opened: %v", err)
-			}
-			defer file.Close()
-
-			sc := bufio.NewScanner(file)
-
-			for sc.Scan() {
-				txt := sc.Text()
-				History = append(History, txt)
+			return HandleHistoryRead(filename)
+		case com.Args[0] == "-w":
+			filename := com.Args[1]
+			if len(filename) == 0 {
+				goto def
 			}
 
-			return nil
+			return HandleHistoryWrite(filename)
 		default:
 			c, err := strconv.Atoi(com.Args[0])
 			if err != nil || c < 0 {
