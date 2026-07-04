@@ -100,6 +100,13 @@ func (com *Com) HandleHistory() error {
 			}
 
 			return HandleHistoryWrite(filename)
+		case com.Args[0] == "-a":
+			filename := com.Args[1]
+			if len(filename) == 0 {
+				goto def
+			}
+
+			return HandleHistoryAppend(filename)
 		default:
 			c, err := strconv.Atoi(com.Args[0])
 			if err != nil || c < 0 {

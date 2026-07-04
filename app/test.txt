@@ -2,3 +2,5 @@ cat test.txt
 hello world
 echo adheil
 history -w test.txt
+echo hello
+history -a test.txt
