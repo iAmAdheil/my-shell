@@ -44,6 +44,8 @@ func HandleHistoryAppend(filename string) error {
 		return fmt.Errorf("history logs could not be appended to file: %v", err)
 	}
 
+	History = []string{}
+
 	return nil
 }
 
