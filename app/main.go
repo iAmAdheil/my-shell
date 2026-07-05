@@ -24,6 +24,9 @@ func GetComm(com string) (string, []string) {
 }
 
 func main() {
+	// runs on startup
+	// Init()
+
 	l, err := readline.NewEx(GetConfig())
 	if err != nil {
 		panic(err)

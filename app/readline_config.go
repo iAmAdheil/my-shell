@@ -77,6 +77,20 @@ func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, 
 	return line, pos, true
 }
 
+// runs on startup
+func Init() {
+	filename := os.Getenv("HISTFILE")
+	if len(filename) == 0 {
+		return
+	}
+
+	// loads history on start
+	err := com.HandleHistoryRead(filename)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func GetConfig() *readline.Config {
 	var completer = readline.NewPrefixCompleter(
 		readline.PcItem("echo"),
@@ -121,12 +135,23 @@ func GetConfig() *readline.Config {
 		inner: completer,
 	}
 
+	histfile := os.Getenv("HISTFILE")
+	if len(histfile) == 0 {
+		histfile = com.HISTORY_FILE
+	}
+
+	// loads history on start
+	err := com.HandleHistoryRead(histfile)
+	if err != nil {
+		panic(err)
+	}
+
 	return &readline.Config{
 		// Prompt:          "\033[31m»\033[0m ",
 		Prompt:          "$ ",
 		Listener:        &MyListener{},
 		AutoComplete:    bnm,
-		HistoryFile:     com.HISTORY_FILE,
+		HistoryFile:     histfile,
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
 
