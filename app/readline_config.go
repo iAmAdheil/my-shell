@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/codecrafters-io/shell-starter-go/app/com"
@@ -20,10 +21,10 @@ func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 	// for i, v := range newLine {
 	//  fmt.Printf("\nnewline %v: %s and %v\n", i, string(v), len(string(v)))
 	// }
-
 	if len(newLine) > 0 {
 		return newLine, offset
 	}
+
 	sug := getPathSugg(string(line))
 	if len(sug) > 0 {
 		nr := make([][]rune, 1)
@@ -55,7 +56,7 @@ func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, 
 		return line, pos, false
 	}
 	if checkPath && second && key == 9 {
-		suggs := listPathBinaries(string(line))
+		suggs := SearchPath(string(line))
 		slices.Sort(suggs)
 		if len(suggs) > 0 {
 			fmt.Printf("\n")
@@ -188,23 +189,45 @@ func filterInput(r rune) (rune, bool) {
 
 // tab handler
 func getPathSugg(line string) string {
-	suggs := SearchPath(line)
-	if len(suggs) == 0 {
+	p := strings.Split(line, " ")
+
+	switch len(p) {
+	case 0:
 		return ""
-	} else if len(suggs) > 1 {
-		pref := GetComPrefix(suggs)
-		if len(pref) <= len(line) {
+	case 1:
+		txt := p[0]
+		suggs := SearchPath(txt)
+		if len(suggs) == 0 {
+			return ""
+		} else if len(suggs) > 1 {
+			pref := GetComPrefix(suggs)
+			// if no common prefix, just print after next tab
+			if len(pref) <= len(txt) {
+				return ""
+			}
+			return pref
+		}
+		return suggs[0] + " "
+
+	default:
+		// text that needs to be completed
+		txt := p[len(p)-1]
+		suggs := SearchCurDir(txt)
+		if len(suggs) == 0 {
 			return ""
 		}
-		return pref
+		// else if len(suggs) > 1 {
+		// 	pref := GetComPrefix(suggs)
+		// 	// if no common prefix, just print after next tab
+		// 	if len(pref) <= len(txt) {
+		// 		return ""
+		// 	}
+		// 	return pref
+		// }
+		p[len(p)-1] = suggs[0]
+		fText := strings.Join(p, " ")
+		return fText + " "
 	}
-	return suggs[0] + " "
-}
-
-// tab handler
-func listPathBinaries(line string) []string {
-	suggs := SearchPath(line)
-	return suggs
 }
 
 func listFiles(path string) func(string) []string {

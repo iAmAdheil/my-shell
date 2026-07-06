@@ -36,39 +36,6 @@ func RedirectFilter(args []string, outFilePath *string, redirect *int, mode *int
 	return args
 }
 
-// search path for executable exes that match the passed word arg
-func SearchPath(word string) []string {
-	matches := []string{}
-	path := os.Getenv("PATH")
-	if len(path) == 0 {
-		return matches
-	}
-	dirs := strings.Split(path, ":")
-	for _, dir := range dirs {
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		exes := []string{}
-		for _, file := range files {
-			fileFP := dir + "/" + file.Name()
-			fileInfo, err := os.Stat(fileFP)
-			if err != nil {
-				break
-			}
-			if IsExecAny(fileInfo.Mode().Perm()) { // check file permissions
-				exes = append(exes, file.Name())
-			} else {
-				break
-			}
-		}
-		root := InitTrie(exes)
-		cur_matches := root.Complete(word)
-		matches = append(matches, cur_matches...)
-	}
-	return matches
-}
-
 // switches terminal from cooked to raw mode
 func EnableRaw() *term.State {
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
