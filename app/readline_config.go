@@ -26,7 +26,7 @@ func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 	}
 
 	sug := getPathSugg(string(line))
-	if len(sug) > 0 {
+	if len(sug) > 0 && len(sug) > len(line) {
 		nr := make([][]rune, 1)
 		r := []rune(sug)
 		nr[0] = r[len(line):]
@@ -212,22 +212,32 @@ func getPathSugg(line string) string {
 	default:
 		// text that needs to be completed
 		txt := p[len(p)-1]
-		suggs := SearchCurDir(txt)
-		if len(suggs) == 0 {
-			return ""
+
+		if strings.Contains(txt, "/") {
+			dirs := strings.Split(txt, "/")
+
+			ctxt := dirs[len(dirs)-1]
+			pth := strings.Join(dirs[:len(dirs)-1], "/")
+
+			suggs := SearchDir(ctxt, pth)
+			if len(suggs) == 0 {
+				return ""
+			}
+			p[len(p)-1] = pth + "/" + suggs[0]
+
+		} else {
+			suggs := SearchDir(txt, "")
+			if len(suggs) == 0 {
+				return ""
+			}
+			p[len(p)-1] = suggs[0]
 		}
-		// else if len(suggs) > 1 {
-		// 	pref := GetComPrefix(suggs)
-		// 	// if no common prefix, just print after next tab
-		// 	if len(pref) <= len(txt) {
-		// 		return ""
-		// 	}
-		// 	return pref
-		// }
-		p[len(p)-1] = suggs[0]
+
 		fText := strings.Join(p, " ")
 		return fText + " "
 	}
+
+	return ""
 }
 
 func listFiles(path string) func(string) []string {

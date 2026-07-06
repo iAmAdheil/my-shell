@@ -39,15 +39,18 @@ func SearchPath(word string) []string {
 }
 
 // search path for executable exes that match the passed word arg
-func SearchCurDir(word string) []string {
+func SearchDir(word string, path string) []string {
 	filenames := []string{}
 
-	dir, err := os.Getwd()
-	if err != nil {
-		return []string{}
+	if len(path) == 0 {
+		dir, err := os.Getwd()
+		if err != nil {
+			return []string{}
+		}
+		path = dir
 	}
 
-	entries, err := os.ReadDir(dir)
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return []string{}
 	}
