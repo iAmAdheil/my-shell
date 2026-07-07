@@ -212,6 +212,7 @@ func getPathSugg(line string) string {
 	default:
 		// text that needs to be completed
 		txt := p[len(p)-1]
+		var fText string
 
 		if strings.Contains(txt, "/") {
 			dirs := strings.Split(txt, "/")
@@ -223,18 +224,41 @@ func getPathSugg(line string) string {
 			if len(suggs) == 0 {
 				return ""
 			}
-			p[len(p)-1] = pth + "/" + suggs[0]
+
+			sug := suggs[0]
+			sugTxt := sug.Name
+			if sug.IsDir {
+				sugTxt += "/"
+			}
+
+			p[len(p)-1] = pth + "/" + sugTxt
+
+			fText = strings.Join(p, " ")
+			if !sug.IsDir {
+				fText += " "
+			}
 
 		} else {
 			suggs := SearchDir(txt, "")
 			if len(suggs) == 0 {
 				return ""
 			}
-			p[len(p)-1] = suggs[0]
+
+			sug := suggs[0]
+			sugTxt := sug.Name
+			if sug.IsDir {
+				sugTxt += "/"
+			}
+
+			p[len(p)-1] = sugTxt
+
+			fText = strings.Join(p, " ")
+			if !sug.IsDir {
+				fText += " "
+			}
 		}
 
-		fText := strings.Join(p, " ")
-		return fText + " "
+		return fText
 	}
 
 	return ""

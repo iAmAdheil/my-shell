@@ -38,31 +38,56 @@ func SearchPath(word string) []string {
 	return matches
 }
 
+type SearchRes struct {
+	Name  string
+	IsDir bool
+}
+
 // search path for executable exes that match the passed word arg
-func SearchDir(word string, path string) []string {
+func SearchDir(word string, path string) []SearchRes {
+	matches := []SearchRes{}
 	filenames := []string{}
+	dirnames := []string{}
 
 	if len(path) == 0 {
 		dir, err := os.Getwd()
 		if err != nil {
-			return []string{}
+			return []SearchRes{}
 		}
 		path = dir
 	}
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return []string{}
+		return []SearchRes{}
 	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			filenames = append(filenames, entry.Name())
+		} else {
+			dirnames = append(dirnames, entry.Name())
 		}
 	}
 
-	root := InitTrie(filenames)
-	matches := root.Complete(word)
+	froot := InitTrie(filenames)
+	fmatches := froot.Complete(word)
+
+	droot := InitTrie(dirnames)
+	dmatches := droot.Complete(word)
+
+	for _, v := range dmatches {
+		matches = append(matches, SearchRes{
+			Name:  v,
+			IsDir: true,
+		})
+	}
+	for _, v := range fmatches {
+		matches = append(matches, SearchRes{
+			Name:  v,
+			IsDir: false,
+		})
+	}
 
 	return matches
 }
