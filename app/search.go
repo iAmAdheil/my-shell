@@ -68,7 +68,18 @@ func Search(line string) (string, []string) {
 			if len(suggs) == 0 {
 				return "", []string{}
 			} else if len(suggs) > 1 {
-				return "", NormaliseSuggs(suggs)
+				nsuggs := NormaliseSuggs(suggs)
+
+				pref := GetComPrefix(nsuggs)
+				// if no common prefix, just print after next tab
+				if len(pref) <= len(ctxt) {
+					// no changes in string, but suggs available
+					return "", nsuggs
+				}
+
+				p[len(p)-1] = pth + "/" + pref
+				fText = strings.Join(p, " ")
+				return fText, nsuggs
 			}
 
 			sug := suggs[0]
@@ -89,7 +100,18 @@ func Search(line string) (string, []string) {
 			if len(suggs) == 0 {
 				return "", []string{}
 			} else if len(suggs) > 1 {
-				return "", NormaliseSuggs(suggs)
+				nsuggs := NormaliseSuggs(suggs)
+
+				pref := GetComPrefix(nsuggs)
+				// if no common prefix, just print after next tab
+				if len(pref) <= len(txt) {
+					// no changes in string, but suggs available
+					return "", nsuggs
+				}
+
+				p[len(p)-1] = pref
+				fText = strings.Join(p, " ")
+				return fText, nsuggs
 			}
 
 			sug := suggs[0]
