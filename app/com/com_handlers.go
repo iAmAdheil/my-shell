@@ -37,6 +37,8 @@ func (com *Com) Run() {
 		com.HandleCd()
 	case "history":
 		com.HandleHistory()
+	case "jobs":
+		com.HandleJobs()
 	default:
 		exePath := GetBinaryPath(com.Main)
 		if len(exePath) > 0 {
@@ -178,7 +180,7 @@ func (com *Com) HandleType() {
 
 	m := com.Args[0]
 	switch m {
-	case "exit", "echo", "type", "pwd", "cd", "history":
+	case "exit", "echo", "type", "pwd", "cd", "history", "jobs":
 		fmt.Fprintf(com.Out, "%s is a shell builtin\n", m)
 
 	default:
@@ -189,6 +191,10 @@ func (com *Com) HandleType() {
 			fmt.Fprintf(com.Out, "%s: not found\n", m)
 		}
 	}
+}
+
+func (com *Com) HandleJobs() {
+
 }
 
 // redirect == 1 -> stdout
