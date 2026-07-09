@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"slices"
-	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/codecrafters-io/shell-starter-go/app/com"
@@ -26,10 +25,13 @@ func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 	}
 
 	sug := getPathSugg(string(line))
-	if len(sug) > 0 && len(sug) > len(line) {
+	if len(sug) > 0 && len(sug) > len(string(line)) {
 		nr := make([][]rune, 1)
 		r := []rune(sug)
 		nr[0] = r[len(line):]
+
+		checkPath = false
+
 		return nr, offset
 	}
 
@@ -56,7 +58,7 @@ func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, 
 		return line, pos, false
 	}
 	if checkPath && second && key == 9 {
-		suggs := SearchPath(string(line))
+		_, suggs := Search(string(line))
 		slices.Sort(suggs)
 		if len(suggs) > 0 {
 			fmt.Printf("\n")
@@ -189,79 +191,8 @@ func filterInput(r rune) (rune, bool) {
 
 // tab handler
 func getPathSugg(line string) string {
-	p := strings.Split(line, " ")
-
-	switch len(p) {
-	case 0:
-		return ""
-	case 1:
-		txt := p[0]
-		suggs := SearchPath(txt)
-		if len(suggs) == 0 {
-			return ""
-		} else if len(suggs) > 1 {
-			pref := GetComPrefix(suggs)
-			// if no common prefix, just print after next tab
-			if len(pref) <= len(txt) {
-				return ""
-			}
-			return pref
-		}
-		return suggs[0] + " "
-
-	default:
-		// text that needs to be completed
-		txt := p[len(p)-1]
-		var fText string
-
-		if strings.Contains(txt, "/") {
-			dirs := strings.Split(txt, "/")
-
-			ctxt := dirs[len(dirs)-1]
-			pth := strings.Join(dirs[:len(dirs)-1], "/")
-
-			suggs := SearchDir(ctxt, pth)
-			if len(suggs) == 0 {
-				return ""
-			}
-
-			sug := suggs[0]
-			sugTxt := sug.Name
-			if sug.IsDir {
-				sugTxt += "/"
-			}
-
-			p[len(p)-1] = pth + "/" + sugTxt
-
-			fText = strings.Join(p, " ")
-			if !sug.IsDir {
-				fText += " "
-			}
-
-		} else {
-			suggs := SearchDir(txt, "")
-			if len(suggs) == 0 {
-				return ""
-			}
-
-			sug := suggs[0]
-			sugTxt := sug.Name
-			if sug.IsDir {
-				sugTxt += "/"
-			}
-
-			p[len(p)-1] = sugTxt
-
-			fText = strings.Join(p, " ")
-			if !sug.IsDir {
-				fText += " "
-			}
-		}
-
-		return fText
-	}
-
-	return ""
+	res, _ := Search(line)
+	return res
 }
 
 func listFiles(path string) func(string) []string {

@@ -2,8 +2,128 @@ package main
 
 import (
 	"os"
+	"slices"
 	"strings"
 )
+
+func Search(line string) (string, []string) {
+	p := strings.Split(line, " ")
+
+	switch len(p) {
+	case 0:
+		return "", []string{}
+	case 1:
+		txt := p[0]
+		suggs := SearchPath(txt)
+		if len(suggs) == 0 {
+			// no changes in string and no suggs
+			return "", suggs
+		} else if len(suggs) > 1 {
+			pref := GetComPrefix(suggs)
+			// if no common prefix, just print after next tab
+			if len(pref) <= len(txt) {
+				// no changes in string, but suggs available
+				return "", suggs
+			}
+			// use common pref string, suggs available
+			return pref, suggs
+		}
+		return suggs[0] + " ", suggs
+
+	default:
+		// text that needs to be completed
+		txt := p[len(p)-1]
+		var (
+			fText string
+			suggs []SearchRes
+		)
+
+		if len(txt) == 0 {
+			suggs = SearchDir("", "")
+			if len(suggs) == 0 {
+				return "", []string{}
+			} else if len(suggs) > 1 {
+				return "", NormaliseSuggs(suggs)
+			}
+
+			sug := suggs[0]
+			sugTxt := sug.Name
+			if sug.IsDir {
+				sugTxt += "/"
+			}
+
+			p[len(p)-1] = sugTxt
+
+			fText = strings.Join(p, " ")
+			if !sug.IsDir {
+				fText += " "
+			}
+		} else if strings.Contains(txt, "/") {
+			dirs := strings.Split(txt, "/")
+
+			ctxt := dirs[len(dirs)-1]                    // text to be completed
+			pth := strings.Join(dirs[:len(dirs)-1], "/") // path excluding txt to be completed
+
+			suggs = SearchDir(ctxt, pth)
+			if len(suggs) == 0 {
+				return "", []string{}
+			} else if len(suggs) > 1 {
+				return "", NormaliseSuggs(suggs)
+			}
+
+			sug := suggs[0]
+			sugTxt := sug.Name
+			if sug.IsDir {
+				sugTxt += "/"
+			}
+
+			p[len(p)-1] = pth + "/" + sugTxt
+
+			fText = strings.Join(p, " ")
+			if !sug.IsDir {
+				fText += " "
+			}
+
+		} else {
+			suggs = SearchDir(txt, "")
+			if len(suggs) == 0 {
+				return "", []string{}
+			} else if len(suggs) > 1 {
+				return "", NormaliseSuggs(suggs)
+			}
+
+			sug := suggs[0]
+			sugTxt := sug.Name
+			if sug.IsDir {
+				sugTxt += "/"
+			}
+
+			p[len(p)-1] = sugTxt
+
+			fText = strings.Join(p, " ")
+			if !sug.IsDir {
+				fText += " "
+			}
+		}
+
+		return fText, NormaliseSuggs(suggs)
+	}
+}
+
+func NormaliseSuggs(sgs []SearchRes) []string {
+	var nsgs []string
+	for _, v := range sgs {
+		if v.IsDir {
+			nsgs = append(nsgs, v.Name+"/")
+		} else {
+			nsgs = append(nsgs, v.Name)
+		}
+	}
+
+	slices.Sort(nsgs)
+
+	return nsgs
+}
 
 // search path for executable exes that match the passed word arg
 func SearchPath(word string) []string {
@@ -35,6 +155,9 @@ func SearchPath(word string) []string {
 		cur_matches := root.Complete(word)
 		matches = append(matches, cur_matches...)
 	}
+
+	slices.Sort(matches)
+
 	return matches
 }
 
@@ -68,6 +191,23 @@ func SearchDir(word string, path string) []SearchRes {
 		} else {
 			dirnames = append(dirnames, entry.Name())
 		}
+	}
+
+	if len(word) == 0 {
+		for _, v := range dirnames {
+			matches = append(matches, SearchRes{
+				Name:  v,
+				IsDir: true,
+			})
+		}
+		for _, v := range filenames {
+			matches = append(matches, SearchRes{
+				Name:  v,
+				IsDir: false,
+			})
+		}
+
+		return matches
 	}
 
 	froot := InitTrie(filenames)
