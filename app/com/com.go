@@ -19,6 +19,7 @@ type Com struct {
 	Redirect int
 	// 0 -> overwrite
 	// 1 -> append
-	Mode  int  // append or overwrite
-	Close bool // check to manually close the write end of pipe except when os.Stdout
+	Mode     int  // append or overwrite
+	Close    bool // check to manually close the write end of pipe except when os.Stdout
+	IsBgProc bool // flag to mark proc as a background running proc
 }

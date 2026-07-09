@@ -12,7 +12,12 @@ import (
 
 func (com *Com) Stop() {
 	// wait only unblocks when both the ends for the write end of a pipe close
-	// when previous proc's wait unblocks and com.Close runs
+	// when previous proc's wait unblocks (their own pipes close) and com.Close runs -> which closes the pipe
+	if com.IsBgProc {
+		fmt.Printf("[1] %v\n", com.Proc.Process.Pid)
+		return
+	}
+
 	com.Proc.Wait()
 	if com.Close {
 		err := com.Out.Close()
@@ -193,9 +198,7 @@ func (com *Com) HandleType() {
 	}
 }
 
-func (com *Com) HandleJobs() {
-
-}
+func (com *Com) HandleJobs() {}
 
 // redirect == 1 -> stdout
 // redirect == 2 -> stderr

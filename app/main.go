@@ -85,6 +85,7 @@ func main() {
 
 			// filter out args without the redirect args
 			args = RedirectFilter(args, &outFilePath, &redirect, &mode)
+			isBg, args := HandleBgArg(args)
 
 			com := &com.Com{
 				Main:        main,
@@ -96,6 +97,7 @@ func main() {
 				Redirect:    redirect,
 				Mode:        mode,
 				Close:       close,
+				IsBgProc:    isBg,
 			}
 
 			com.Run()

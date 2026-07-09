@@ -36,6 +36,13 @@ func RedirectFilter(args []string, outFilePath *string, redirect *int, mode *int
 	return args
 }
 
+func HandleBgArg(args []string) (bool, []string) {
+	if len(args) > 0 && args[len(args)-1] == "&" {
+		return true, args[:len(args)-1]
+	}
+	return false, args
+}
+
 // switches terminal from cooked to raw mode
 func EnableRaw() *term.State {
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
