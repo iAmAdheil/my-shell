@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -87,7 +88,7 @@ func main() {
 			args = RedirectFilter(args, &outFilePath, &redirect, &mode)
 			isBg, args := HandleBgArg(args)
 
-			com := &com.Com{
+			c := &com.Com{
 				Main:        main,
 				Args:        args,
 				Proc:        exec.Command(main, args...),
@@ -100,15 +101,34 @@ func main() {
 				IsBgProc:    isBg,
 			}
 
-			com.Run()
+			c.Run()
 			// pass current com's pr to next com,
 			// to read whatever is added via pw
 			in = pr
-			running = append(running, com)
+			running = append(running, c)
+			if c.IsBgProc {
+				njob := com.Job{
+					Id:      len(com.Jobs) + 1,
+					PId:     c.Proc.Process.Pid,
+					Status:  "Running",
+					ComText: c.Main + " " + strings.Join(c.Args, " "),
+				}
+				fmt.Printf("[%v] %v\n", njob.Id, njob.PId)
+				com.Jobs[njob.PId] = njob
+			}
 		}
 
-		for _, com := range running {
-			com.Stop()
+		for _, c := range running {
+			if c.IsBgProc {
+				go func() {
+					pid := c.Proc.Process.Pid
+					c.Stop()
+					// djob := com.Jobs[pid]
+					delete(com.Jobs, pid)
+				}()
+			} else {
+				c.Stop()
+			}
 		}
 
 		// case strings.HasPrefix(line, "mode "):
