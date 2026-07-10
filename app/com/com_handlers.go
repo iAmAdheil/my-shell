@@ -201,12 +201,23 @@ type Job struct {
 }
 
 var (
-	Jobs map[int]Job = make(map[int]Job) // string is Id for ease of finding a job by its PId
+	Jobs  map[int]Job = make(map[int]Job) // string is Id for ease of finding a job by its PId
+	Count int         = 0
 )
 
 func (com *Com) HandleJobs() {
+	var sign string = " "
 	for _, job := range Jobs {
-		fmt.Printf("[%v]+  %-24s%s\n", job.Id, job.Status, job.ComText)
+		switch job.Id {
+		case Count - 1:
+			sign = "-"
+		case Count:
+			sign = "+"
+		default:
+			sign = " "
+		}
+
+		fmt.Printf("[%v]%s  %-24s%s\n", job.Id, sign, job.Status, job.ComText)
 	}
 }
 

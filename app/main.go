@@ -106,12 +106,14 @@ func main() {
 			// to read whatever is added via pw
 			in = pr
 			running = append(running, c)
+
 			if c.IsBgProc {
+				com.Count++
 				njob := com.Job{
-					Id:      len(com.Jobs) + 1,
+					Id:      com.Count,
 					PId:     c.Proc.Process.Pid,
 					Status:  "Running",
-					ComText: c.Main + " " + strings.Join(c.Args, " "),
+					ComText: c.Main + " " + strings.Join(c.Args, " ") + " " + "&",
 				}
 				fmt.Printf("[%v] %v\n", njob.Id, njob.PId)
 				com.Jobs[njob.PId] = njob
@@ -124,6 +126,7 @@ func main() {
 					pid := c.Proc.Process.Pid
 					c.Stop()
 					// djob := com.Jobs[pid]
+					com.Count--
 					delete(com.Jobs, pid)
 				}()
 			} else {
