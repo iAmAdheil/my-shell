@@ -279,13 +279,30 @@ func (com *Com) HandleJobs() {
 	Jobs = ujobs
 }
 
+var CEntries = map[string]string{}
+
 func (com *Com) HandleComplete() {
-	if com.Args[0] == "-p" {
+	switch com.Args[0] {
+	case "-p":
 		com.Args = com.Args[1:]
 		if len(com.Args) > 0 {
 			name := com.Args[0]
-			fmt.Printf("complete: %s: no completion specification\n", name)
+			path, ok := CEntries[name]
+			if !ok {
+				fmt.Printf("complete: %s: no completion specification\n", name)
+			} else {
+				fmt.Printf("complete -C '%s' %s\n", path, name)
+			}
 		}
+	case "-C":
+		com.Args = com.Args[1:]
+		if len(com.Args) >= 2 {
+			name := com.Args[1]
+			path := com.Args[0]
+			CEntries[name] = path
+		} else {
+		}
+	default:
 	}
 }
 
