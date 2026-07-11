@@ -132,6 +132,8 @@ func main() {
 			}
 		}
 
+		com.HandleCompleteJobs()
+
 		// case strings.HasPrefix(line, "mode "):
 		// 	switch line[5:] {
 		// 	case "vi":

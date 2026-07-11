@@ -213,6 +213,35 @@ func UpdateJobStatus(pid int) {
 	}
 }
 
+func HandleCompleteJobs() {
+	var sign string = " "
+	for idx, job := range Jobs {
+		switch idx {
+		case len(Jobs) - 1:
+			sign = "+"
+		case len(Jobs) - 2:
+			sign = "-"
+		default:
+			sign = " "
+		}
+
+		if job.Status == "Done" {
+			fmt.Printf("[%v]%s  %-24s%s\n", job.Id, sign, job.Status, job.ComText)
+		}
+	}
+
+	var ujobs []*Job
+	for _, job := range Jobs {
+		if job.Status != "Done" {
+			ujobs = append(ujobs, job)
+		} else {
+			Count--
+		}
+	}
+
+	Jobs = ujobs
+}
+
 func (com *Com) HandleJobs() {
 	var sign string = " "
 	// " &" -> status 'Running', "" -> status 'Done'
