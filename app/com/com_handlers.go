@@ -279,7 +279,15 @@ func (com *Com) HandleJobs() {
 	Jobs = ujobs
 }
 
-func (com *Com) HandleComplete() {}
+func (com *Com) HandleComplete() {
+	if com.Args[0] == "-p" {
+		com.Args = com.Args[1:]
+		if len(com.Args) > 0 {
+			name := com.Args[0]
+			fmt.Printf("complete: %s: no completion specification\n", name)
+		}
+	}
+}
 
 // redirect == 1 -> stdout
 // redirect == 2 -> stderr
