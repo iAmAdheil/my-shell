@@ -218,11 +218,11 @@ func (com *Com) HandleJobs() {
 	// " &" -> status 'Running', "" -> status 'Done'
 	var suf = " &"
 	for idx, job := range Jobs {
-		switch job.Id {
-		case Count - 1:
-			sign = "-"
-		case Count:
+		switch idx {
+		case len(Jobs) - 1:
 			sign = "+"
+		case len(Jobs) - 2:
+			sign = "-"
 		default:
 			sign = " "
 		}
@@ -234,12 +234,18 @@ func (com *Com) HandleJobs() {
 		}
 
 		fmt.Printf("[%v]%s  %-24s%s%s\n", job.Id, sign, job.Status, job.ComText, suf)
+	}
 
-		if job.Status == "Done" {
-			// remove jobs with status "Done"
-			Jobs = append(Jobs[:idx], Jobs[idx+1:]...)
+	var ujobs []*Job
+	for _, job := range Jobs {
+		if job.Status != "Done" {
+			ujobs = append(ujobs, job)
+		} else {
+			Count--
 		}
 	}
+
+	Jobs = ujobs
 }
 
 // redirect == 1 -> stdout
