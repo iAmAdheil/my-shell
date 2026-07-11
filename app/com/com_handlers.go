@@ -201,13 +201,23 @@ type Job struct {
 }
 
 var (
-	Jobs  map[int]Job = make(map[int]Job) // string is Id for ease of finding a job by its PId
-	Count int         = 0
+	Jobs  []*Job // string is Id for ease of finding a job by its PId
+	Count int    = 0
 )
+
+func UpdateJobStatus(pid int) {
+	for _, job := range Jobs {
+		if job.PId == pid {
+			job.Status = "Done"
+		}
+	}
+}
 
 func (com *Com) HandleJobs() {
 	var sign string = " "
-	for _, job := range Jobs {
+	// " &" -> status 'Running', "" -> status 'Done'
+	var suf = " &"
+	for idx, job := range Jobs {
 		switch job.Id {
 		case Count - 1:
 			sign = "-"
@@ -217,7 +227,18 @@ func (com *Com) HandleJobs() {
 			sign = " "
 		}
 
-		fmt.Printf("[%v]%s  %-24s%s\n", job.Id, sign, job.Status, job.ComText)
+		if job.Status == "Done" {
+			suf = ""
+		} else {
+			suf = " &"
+		}
+
+		fmt.Printf("[%v]%s  %-24s%s%s\n", job.Id, sign, job.Status, job.ComText, suf)
+
+		if job.Status == "Done" {
+			// remove jobs with status "Done"
+			Jobs = append(Jobs[:idx], Jobs[idx+1:]...)
+		}
 	}
 }
 
