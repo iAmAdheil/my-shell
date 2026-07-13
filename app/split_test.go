@@ -11,7 +11,7 @@ import (
 
 func TestSplit(t *testing.T) {
 	// str := "\"/tmp/ant/f 60\" \"/tmp/ant/f   54\" \"/tmp/ant/f's98\""
-	str := "complete   -C    /path/to/git/completer   git"
+	str := "docker exec "
 	res := SplitComm(str)
 	for i, v := range res {
 		fmt.Println("index:", i, "value:", v)

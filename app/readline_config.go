@@ -13,16 +13,17 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/app/com"
 )
 
-func handleCompleter(rline []rune) string {
+func handleCompleter(rline []rune) (string, []string) {
 	line := string(rline)
 
 	// use main to check for an existing entry
 	// main & args to be passed to proc as arguments
-	main, args := GetComm(line)
+	args := strings.Split(line, " ")
+	main := args[0]
 
 	exepath, ok := com.CEntries[strings.TrimSpace(main)]
 	if !ok {
-		return ""
+		return "", []string{}
 	}
 
 	cw := NewCustomWriter()
@@ -32,10 +33,10 @@ func handleCompleter(rline []rune) string {
 	var arg2 string = "" // word to be completed
 	var arg3 string = "" // second last arg (before word to be completed)
 
-	if len(args) > 0 {
+	if n > 0 {
 		arg2 = args[n-1]
 	}
-	if len(args) > 1 {
+	if n > 1 {
 		arg3 = args[n-2]
 	}
 
@@ -50,12 +51,31 @@ func handleCompleter(rline []rune) string {
 	c.RunBinary()
 	c.Stop()
 
-	newLine := strings.Trim(cw.buf.String(), "\n")
-	if len(newLine) == 0 || len(newLine) <= len(arg2) {
-		return ""
+	newLine := strings.Split(cw.buf.String(), "\n")
+	nlLen := len(newLine)
+	// remove last string if empty
+	if len(newLine[nlLen-1]) == 0 {
+		newLine = newLine[:nlLen-1]
 	}
 
-	return newLine[len(arg2):] + " "
+	if len(newLine) > 1 {
+		var opts []string
+
+		for _, opt := range newLine {
+			opts = append(opts, opt)
+		}
+
+		return "", opts
+	} else if len(newLine) == 0 {
+		return "", []string{}
+	}
+
+	nw := newLine[0]
+	if len(nw) == 0 || len(nw) <= len(arg2) {
+		return "", []string{}
+	}
+
+	return nw[len(arg2):] + " ", []string{}
 }
 
 func handleSetupEnvVars(line []rune, pos int) {
@@ -78,7 +98,7 @@ type BellNoMatch struct {
 func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 	handleSetupEnvVars(line, pos)
 
-	compLine := handleCompleter(line)
+	compLine, _ := handleCompleter(line)
 	if len(compLine) > 0 {
 		nr := make([][]rune, 1)
 		r := []rune(compLine)
@@ -118,6 +138,14 @@ var (
 
 type MyListener struct{}
 
+func PrintOpts(opts []string) {
+	fmt.Printf("\n")
+	for _, opt := range opts {
+		fmt.Printf("%s  ", opt)
+	}
+	fmt.Printf("\n")
+}
+
 func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, newPos int, ok bool) {
 	// obstructs logs from query execution
 	// returning true prints prompt
@@ -126,14 +154,17 @@ func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, 
 		return line, pos, false
 	}
 	if checkPath && second && key == 9 {
+		_, compsuggs := handleCompleter(line)
+		if len(compsuggs) > 0 {
+			PrintOpts(compsuggs)
+			goto esc
+		}
+
 		_, suggs := Search(string(line))
-		slices.Sort(suggs)
 		if len(suggs) > 0 {
-			fmt.Printf("\n")
-			for _, sug := range suggs {
-				fmt.Printf("%s  ", sug)
-			}
-			fmt.Printf("\n")
+			slices.Sort(suggs)
+			PrintOpts(suggs)
+			goto esc
 		}
 	}
 
@@ -145,6 +176,7 @@ func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, 
 		checkPath = false
 		second = false
 	}
+esc:
 	return line, pos, true
 }
 
