@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -57,6 +58,17 @@ func handleCompleter(rline []rune) string {
 	return newLine[len(arg2):] + " "
 }
 
+func handleSetupEnvVars(line []rune, pos int) {
+	lineStr := string(line)
+
+	if err := os.Setenv("COMP_POINT", strconv.Itoa(pos)); err != nil {
+		fmt.Printf("failed to setup comp_point env.")
+	}
+	if err := os.Setenv("COMP_LINE", lineStr); err != nil {
+		fmt.Printf("failed to setup comp_line env.")
+	}
+}
+
 // implements the readline.AutoCompleter interface
 type BellNoMatch struct {
 	inner *readline.PrefixCompleter
@@ -64,6 +76,8 @@ type BellNoMatch struct {
 
 // offset -> offset on the left for new completion
 func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
+	handleSetupEnvVars(line, pos)
+
 	compLine := handleCompleter(line)
 	if len(compLine) > 0 {
 		nr := make([][]rune, 1)
