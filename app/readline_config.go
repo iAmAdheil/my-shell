@@ -4,22 +4,58 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"slices"
+	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/codecrafters-io/shell-starter-go/app/com"
 )
+
+func handleCompleter(rline []rune) string {
+	line := string(rline)
+
+	exepath, ok := com.CEntries[strings.TrimSpace(line)]
+	if !ok {
+		return ""
+	}
+
+	cw := NewCustomWriter()
+
+	c := &com.Com{
+		Proc: exec.Command(exepath),
+		In:   nil,
+		Out:  cw,
+	}
+
+	c.RunBinary()
+	c.Stop()
+
+	newLine := strings.Trim(cw.buf.String(), "\n")
+	if len(newLine) == 0 {
+		return ""
+	}
+
+	return newLine + " "
+}
 
 // implements the readline.AutoCompleter interface
 type BellNoMatch struct {
 	inner *readline.PrefixCompleter
 }
 
+// offset -> offset on the left for new completion
 func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
+	compLine := handleCompleter(line)
+	if len(compLine) > 0 {
+		nr := make([][]rune, 1)
+		r := []rune(compLine)
+		nr[0] = r
+
+		return nr, len(line)
+	}
+
 	newLine, offset := bnm.inner.Do(line, pos)
-	// for i, v := range newLine {
-	//  fmt.Printf("\nnewline %v: %s and %v\n", i, string(v), len(string(v)))
-	// }
 	if len(newLine) > 0 {
 		return newLine, offset
 	}
@@ -32,7 +68,7 @@ func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 
 		checkPath = false
 
-		return nr, offset
+		return nr, len(line)
 	}
 
 	fmt.Fprint(os.Stderr, "\a")
