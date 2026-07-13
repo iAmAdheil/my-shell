@@ -15,15 +15,33 @@ import (
 func handleCompleter(rline []rune) string {
 	line := string(rline)
 
-	exepath, ok := com.CEntries[strings.TrimSpace(line)]
+	// use main to check for an existing entry
+	// main & args to be passed to proc as arguments
+	main, args := GetComm(line)
+
+	exepath, ok := com.CEntries[strings.TrimSpace(main)]
 	if !ok {
 		return ""
 	}
 
 	cw := NewCustomWriter()
+	n := len(args)
+
+	arg1 := main
+	var arg2 string = "" // word to be completed
+	var arg3 string = "" // second last arg (before word to be completed)
+
+	if len(args) > 0 {
+		arg2 = args[n-1]
+	}
+	if len(args) > 1 {
+		arg3 = args[n-2]
+	}
+
+	cargs := []string{arg1, arg2, arg3}
 
 	c := &com.Com{
-		Proc: exec.Command(exepath),
+		Proc: exec.Command(exepath, cargs...),
 		In:   nil,
 		Out:  cw,
 	}
@@ -32,11 +50,11 @@ func handleCompleter(rline []rune) string {
 	c.Stop()
 
 	newLine := strings.Trim(cw.buf.String(), "\n")
-	if len(newLine) == 0 {
+	if len(newLine) == 0 || len(newLine) <= len(arg2) {
 		return ""
 	}
 
-	return newLine + " "
+	return newLine[len(arg2):] + " "
 }
 
 // implements the readline.AutoCompleter interface
