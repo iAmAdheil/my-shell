@@ -65,7 +65,14 @@ func handleCompleter(rline []rune) (string, []string) {
 			opts = append(opts, opt)
 		}
 
-		return "", opts
+		pref := GetComPrefix(opts)
+		// if no common prefix, just print after next tab
+		if len(pref) == 0 || len(pref) <= len(arg2) {
+			// no changes in string, but suggs available
+			return "", opts
+		}
+
+		return pref[len(arg2):], opts
 	} else if len(newLine) == 0 {
 		return "", []string{}
 	}
