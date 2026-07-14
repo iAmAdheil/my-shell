@@ -284,6 +284,10 @@ func (com *Com) HandleJobs() {
 var CEntries = map[string]string{}
 
 func (com *Com) HandleComplete() {
+	if len(com.Args) == 0 {
+		return
+	}
+
 	switch com.Args[0] {
 	case "-p":
 		com.Args = com.Args[1:]
@@ -314,7 +318,20 @@ func (com *Com) HandleComplete() {
 	}
 }
 
-func (com *Com) HandleDeclare() {}
+func (com *Com) HandleDeclare() {
+	if len(com.Args) == 0 {
+		return
+	}
+
+	switch com.Args[0] {
+	case "-p":
+		com.Args = com.Args[1:]
+		if len(com.Args) > 0 {
+			v := com.Args[0]
+			fmt.Printf("declare: %s: not found\n", v)
+		}
+	}
+}
 
 // redirect == 1 -> stdout
 // redirect == 2 -> stderr
