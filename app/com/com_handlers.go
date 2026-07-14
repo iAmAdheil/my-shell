@@ -41,6 +41,8 @@ func (com *Com) Run() {
 		com.HandleJobs()
 	case "complete":
 		com.HandleComplete()
+	case "declare":
+		com.HandleDeclare()
 	default:
 		exePath := GetBinaryPath(com.Main)
 		if len(exePath) > 0 {
@@ -311,6 +313,8 @@ func (com *Com) HandleComplete() {
 	default:
 	}
 }
+
+func (com *Com) HandleDeclare() {}
 
 // redirect == 1 -> stdout
 // redirect == 2 -> stderr
