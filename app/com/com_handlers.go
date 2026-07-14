@@ -318,6 +318,8 @@ func (com *Com) HandleComplete() {
 	}
 }
 
+var DeclaredVars = map[string]string{}
+
 func (com *Com) HandleDeclare() {
 	if len(com.Args) == 0 {
 		return
@@ -327,9 +329,32 @@ func (com *Com) HandleDeclare() {
 	case "-p":
 		com.Args = com.Args[1:]
 		if len(com.Args) > 0 {
-			v := com.Args[0]
-			fmt.Printf("declare: %s: not found\n", v)
+			k := com.Args[0]
+
+			v, ok := DeclaredVars[k]
+			if !ok {
+				fmt.Printf("declare: %s: not found\n", k)
+				return
+			}
+
+			fmt.Printf("declare -- %s=\"%s\"\n", k, v)
 		}
+	default:
+		if len(com.Args) == 0 {
+			return
+		}
+
+		varDef := com.Args[0]
+		vals := strings.Split(varDef, "=")
+
+		if len(vals) < 2 || len(vals[0]) == 0 || len(vals[1]) == 0 {
+			return
+		}
+
+		k := vals[0] // key
+		v := vals[1] // value
+
+		DeclaredVars[k] = v
 	}
 }
 

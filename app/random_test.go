@@ -9,7 +9,7 @@ import (
 // use this to test random things
 
 func TestRandom(t *testing.T) {
-	str := "docker exec "
-	sec := strings.Split(str, " ")
+	str := "var="
+	sec := strings.Split(str, "=")
 	fmt.Println(sec)
 }
