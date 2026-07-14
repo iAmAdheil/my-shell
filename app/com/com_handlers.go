@@ -294,6 +294,12 @@ func (com *Com) HandleComplete() {
 				fmt.Printf("complete -C '%s' %s\n", path, name)
 			}
 		}
+	case "-r":
+		com.Args = com.Args[1:]
+		if len(com.Args) > 0 {
+			name := com.Args[0]
+			delete(CEntries, name)
+		}
 	case "-C":
 		com.Args = com.Args[1:]
 		if len(com.Args) >= 2 {
