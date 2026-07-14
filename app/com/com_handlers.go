@@ -320,6 +320,18 @@ func (com *Com) HandleComplete() {
 
 var DeclaredVars = map[string]string{}
 
+func ValidateKey(word string) bool {
+	if !CheckAlphaNumUS(word) {
+		return false
+	}
+
+	if CheckNum(word[:1]) {
+		return false
+	}
+
+	return true
+}
+
 func (com *Com) HandleDeclare() {
 	if len(com.Args) == 0 {
 		return
@@ -353,6 +365,10 @@ func (com *Com) HandleDeclare() {
 
 		k := vals[0] // key
 		v := vals[1] // value
+
+		if !ValidateKey(k) {
+			fmt.Printf("declare: `%s=%s': not a valid identifier\n", k, v)
+		}
 
 		DeclaredVars[k] = v
 	}

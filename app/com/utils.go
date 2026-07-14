@@ -3,8 +3,17 @@ package com
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
+
+func CheckAlphaNumUS(word string) bool { // allow letters, numbers and underscore
+	return regexp.MustCompile(`^[a-zA-Z0-9_]*$`).MatchString(word)
+}
+
+func CheckNum(word string) bool {
+	return regexp.MustCompile(`^[0-9]*$`).MatchString(word)
+}
 
 func GetBinaryPath(filename string) string {
 	path := os.Getenv("PATH")
