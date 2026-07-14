@@ -184,7 +184,7 @@ func (com *Com) HandleType() {
 
 	m := com.Args[0]
 	switch m {
-	case "exit", "echo", "type", "pwd", "cd", "history", "jobs", "complete":
+	case "exit", "echo", "type", "pwd", "cd", "history", "jobs", "complete", "declare":
 		fmt.Fprintf(com.Out, "%s is a shell builtin\n", m)
 
 	default:
