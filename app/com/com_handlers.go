@@ -335,8 +335,10 @@ func ValidateKey(word string) bool {
 	return true
 }
 
-func HandleExpandVar(args *[]string) {
-	for i, arg := range *args {
+func HandleExpandVar(args []string) []string {
+	fargs := []string{}
+
+	for _, arg := range args {
 		if strings.Contains(arg, "$") {
 			idx := strings.Index(arg, "$")
 			// if ${} -> extract pref and suf, else extract only the pref
@@ -350,10 +352,15 @@ func HandleExpandVar(args *[]string) {
 				if len(k) > 0 {
 					v, ok := DeclaredVars[k]
 					if !ok {
-						// will handle in next stage
+						v = ""
 					}
 
-					(*args)[i] = pref + v + suf
+					farg := pref + v + suf
+					if len(farg) == 0 {
+						continue
+					}
+
+					fargs = append(fargs, farg)
 				}
 			} else {
 				pref := arg[:idx]
@@ -361,14 +368,23 @@ func HandleExpandVar(args *[]string) {
 				if len(k) > 0 {
 					v, ok := DeclaredVars[k]
 					if !ok {
-						// will handle in next stage
+						v = ""
 					}
 
-					(*args)[i] = pref + v
+					farg := pref + v
+					if len(farg) == 0 {
+						continue
+					}
+
+					fargs = append(fargs, farg)
 				}
 			}
+		} else {
+			fargs = append(fargs, arg)
 		}
 	}
+
+	return fargs
 }
 
 func (com *Com) HandleDeclare() {

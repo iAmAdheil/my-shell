@@ -22,7 +22,7 @@ func GetComm(c string) (string, []string) {
 		return "", commParts
 	}
 
-	com.HandleExpandVar(&commParts)
+	commParts = com.HandleExpandVar(commParts)
 
 	return commParts[0], commParts[1:]
 }
