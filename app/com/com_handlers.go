@@ -339,16 +339,33 @@ func HandleExpandVar(args *[]string) {
 	for i, arg := range *args {
 		if strings.Contains(arg, "$") {
 			idx := strings.Index(arg, "$")
+			// if ${} -> extract pref and suf, else extract only the pref
+			if strings.Contains(arg, "{") && strings.Contains(arg, "}") {
+				pref := arg[:idx]
+				// idx+1 -> '{'
+				cidx := strings.Index(arg, "}")
+				k := arg[idx+2 : cidx]
+				suf := arg[cidx+1:]
 
-			pref := arg[:idx]
-			k := arg[idx+1:]
-			if len(k) > 0 {
-				v, ok := DeclaredVars[k]
-				if !ok {
-					// will handle in next stage
+				if len(k) > 0 {
+					v, ok := DeclaredVars[k]
+					if !ok {
+						// will handle in next stage
+					}
+
+					(*args)[i] = pref + v + suf
 				}
+			} else {
+				pref := arg[:idx]
+				k := arg[idx+1:]
+				if len(k) > 0 {
+					v, ok := DeclaredVars[k]
+					if !ok {
+						// will handle in next stage
+					}
 
-				(*args)[i] = pref + v
+					(*args)[i] = pref + v
+				}
 			}
 		}
 	}
