@@ -321,6 +321,9 @@ func (com *Com) HandleComplete() {
 var DeclaredVars = map[string]string{}
 
 func ValidateKey(word string) bool {
+	// only allow letters, digits and underscore
+	// and digit not allowed as first char
+
 	if !CheckAlphaNumUS(word) {
 		return false
 	}
@@ -330,6 +333,25 @@ func ValidateKey(word string) bool {
 	}
 
 	return true
+}
+
+func HandleExpandVar(args *[]string) {
+	for i, arg := range *args {
+		if strings.Contains(arg, "$") {
+			idx := strings.Index(arg, "$")
+
+			pref := arg[:idx]
+			k := arg[idx+1:]
+			if len(k) > 0 {
+				v, ok := DeclaredVars[k]
+				if !ok {
+					// will handle in next stage
+				}
+
+				(*args)[i] = pref + v
+			}
+		}
+	}
 }
 
 func (com *Com) HandleDeclare() {

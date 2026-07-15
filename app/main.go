@@ -16,11 +16,14 @@ func GetComms(txt string) []string {
 	return strings.Split(txt, " | ")
 }
 
-func GetComm(com string) (string, []string) {
-	commParts := SplitComm(com)
+func GetComm(c string) (string, []string) {
+	commParts := SplitComm(c)
 	if len(commParts) == 0 {
 		return "", commParts
 	}
+
+	com.HandleExpandVar(&commParts)
+
 	return commParts[0], commParts[1:]
 }
 
