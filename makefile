@@ -1,2 +1,5 @@
-run:
-	@cd app && go run .
+build:
+	@cd app && go build -o ../bin/app
+
+run: build
+	@./bin/app
