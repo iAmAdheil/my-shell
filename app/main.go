@@ -53,8 +53,10 @@ func main() {
 
 		comms := GetComms(txt)
 
-		// "&" applies to the whole line, not only to the last command
-		lineIsBg := strings.HasSuffix(strings.TrimSpace(txt), "&")
+		// "&" applies to the whole line, but HandleBgArg sees one
+		// pipeline segment, and only the last segment carries the "&"
+		_, lastArgs := GetComm(comms[len(comms)-1])
+		lineIsBg, _ := HandleBgArg(lastArgs)
 
 		var in io.Reader = nil
 		var running []*com.Com
