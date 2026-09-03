@@ -53,6 +53,9 @@ func main() {
 
 		comms := GetComms(txt)
 
+		// "&" applies to the whole line, not only to the last command
+		lineIsBg := strings.HasSuffix(strings.TrimSpace(txt), "&")
+
 		var in io.Reader = nil
 		var running []*com.Com
 
@@ -91,11 +94,21 @@ func main() {
 			args = RedirectFilter(args, &outFilePath, &redirect, &mode)
 			isBg, args := HandleBgArg(args)
 
+			// the first command of a pipeline has no pipe to read from.
+			// give it the terminal, so a program can ask for input
+			// during execution (for example "y/n" or a password).
+			// a background command must not read from the terminal,
+			// because the prompt reads from the terminal at the same time.
+			cin := in
+			if cin == nil && !lineIsBg {
+				cin = os.Stdin
+			}
+
 			c := &com.Com{
 				Main:        main,
 				Args:        args,
 				Proc:        exec.Command(main, args...),
-				In:          in,
+				In:          cin,
 				Out:         out,
 				OutFilePath: outFilePath,
 				Redirect:    redirect,
