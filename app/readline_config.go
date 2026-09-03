@@ -101,17 +101,41 @@ type BellNoMatch struct {
 	inner *readline.PrefixCompleter
 }
 
+// completion acts on the word that ends at the cursor.
+// the text on the right of the cursor is not part of that word,
+// and it stays where it is.
+// returns the text on the left of the cursor, and the length of the word.
+func splitAtCursor(line []rune, pos int) ([]rune, int) {
+	if pos > len(line) {
+		pos = len(line)
+	}
+
+	left := line[:pos]
+
+	start := 0
+	for i := len(left) - 1; i >= 0; i-- {
+		if left[i] == ' ' {
+			start = i + 1
+			break
+		}
+	}
+
+	return left, len(left) - start
+}
+
 // offset -> offset on the left for new completion
 func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 	handleSetupEnvVars(line, pos)
 
-	compLine, _ := handleCompleter(line)
+	left, wordLen := splitAtCursor(line, pos)
+
+	compLine, _ := handleCompleter(left)
 	if len(compLine) > 0 {
 		nr := make([][]rune, 1)
 		r := []rune(compLine)
 		nr[0] = r
 
-		return nr, len(line)
+		return nr, wordLen
 	}
 
 	newLine, offset := bnm.inner.Do(line, pos)
@@ -119,15 +143,16 @@ func (bnm *BellNoMatch) Do(line []rune, pos int) ([][]rune, int) {
 		return newLine, offset
 	}
 
-	sug := getPathSugg(string(line))
-	if len(sug) > 0 && len(sug) > len(string(line)) {
+	// Search rebuilds the whole text it is given, with the last word
+	// completed, so the runes after len(left) are what the cursor needs
+	sug := []rune(getPathSugg(string(left)))
+	if len(sug) > len(left) {
 		nr := make([][]rune, 1)
-		r := []rune(sug)
-		nr[0] = r[len(line):]
+		nr[0] = sug[len(left):]
 
 		checkPath = false
 
-		return nr, len(line)
+		return nr, wordLen
 	}
 
 	fmt.Fprint(os.Stderr, "\a")
@@ -161,13 +186,15 @@ func (ml *MyListener) OnChange(line []rune, pos int, key rune) (newLine []rune, 
 		return line, pos, false
 	}
 	if checkPath && second && key == 9 {
-		_, compsuggs := handleCompleter(line)
+		left, _ := splitAtCursor(line, pos)
+
+		_, compsuggs := handleCompleter(left)
 		if len(compsuggs) > 0 {
 			PrintOpts(compsuggs)
 			goto esc
 		}
 
-		_, suggs := Search(string(line))
+		_, suggs := Search(string(left))
 		if len(suggs) > 0 {
 			slices.Sort(suggs)
 			PrintOpts(suggs)
