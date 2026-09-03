@@ -58,6 +58,31 @@ func HandleArgs(args []string) []string {
 	return args
 }
 
+// reads the terminal settings.
+// returns nil when standard input is not a terminal
+func GetTtyState() *term.State {
+	fd := int(os.Stdin.Fd())
+	if !term.IsTerminal(fd) {
+		return nil
+	}
+
+	state, err := term.GetState(fd)
+	if err != nil {
+		return nil
+	}
+
+	return state
+}
+
+// puts back the terminal settings that GetTtyState read
+func RestoreTtyState(state *term.State) {
+	if state == nil {
+		return
+	}
+
+	term.Restore(int(os.Stdin.Fd()), state)
+}
+
 // switches terminal from cooked to raw mode
 func EnableRaw() *term.State {
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))

@@ -56,6 +56,12 @@ func main() {
 		// "&" applies to the entire command, not to one pipeline segment
 		isBg := CheckBgComm(comms)
 
+		// a command inherits the terminal and can change its settings.
+		// a command that stops early leaves the settings changed, and
+		// readline returns to the state that readline found. read the
+		// state here, and put it back when the line finishes.
+		ttyState := GetTtyState()
+
 		var in *os.File = nil // read end of the previous command's pipe
 		var running []*com.Com
 
@@ -159,6 +165,8 @@ func main() {
 				c.Stop()
 			}
 		}
+
+		RestoreTtyState(ttyState)
 
 		com.HandleCompleteJobs()
 
