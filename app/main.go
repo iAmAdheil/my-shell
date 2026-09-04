@@ -56,7 +56,7 @@ func main() {
 		// "&" applies to the entire command, not to one pipeline segment
 		isBg := CheckBgComm(comms)
 
-		var in io.Reader = nil
+		var in *os.File = nil // read end of the previous command's pipe
 		var running []*com.Com
 
 		for i, _ := range comms {
@@ -79,15 +79,19 @@ func main() {
 			args = RedirectFilter(args, &outFilePath, &redirect, &mode)
 			args = HandleArgs(args)
 
-			pr, pw, err := os.Pipe()
-			if err != nil {
-				panic(err)
-			}
-
 			var (
-				out   io.WriteCloser = pw
-				close bool           = true
+				out   io.WriteCloser = os.Stdout
+				close bool           = false
+				pr    *os.File       // read end for the next command
 			)
+			// last command prints to terminal, and needs no pipe
+			if i != len(comms)-1 {
+				r, pw, err := os.Pipe()
+				if err != nil {
+					panic(err)
+				}
+				pr, out, close = r, pw, true
+			}
 
 			// the first command of a pipeline has no pipe to read from.
 			// give it the terminal, so a program can ask for input
@@ -98,17 +102,18 @@ func main() {
 				in = os.Stdin
 			}
 
-			// last command prints to terminal
-			if i == len(comms)-1 {
-				out = os.Stdout
-				close = false
+			// an *os.File that holds nil is not equal to nil after
+			// assignment to an io.Reader, so convert it explicitly
+			var cin io.Reader
+			if in != nil {
+				cin = in
 			}
 
 			c := &com.Com{
 				Main:        main,
 				Args:        args,
 				Proc:        exec.Command(main, args...),
-				In:          in,
+				In:          cin,
 				Out:         out,
 				OutFilePath: outFilePath,
 				Redirect:    redirect,
@@ -119,6 +124,12 @@ func main() {
 			}
 
 			c.Run()
+			// the command holds its own copy of the read end, so the
+			// shell must close the copy that the shell holds.
+			// os.Stdin is not a pipe end, and the shell keeps it open
+			if in != nil && in != os.Stdin {
+				in.Close()
+			}
 			// pass current com's pr to next com,
 			// to read whatever is added via pw
 			in = pr
