@@ -36,11 +36,26 @@ func RedirectFilter(args []string, outFilePath *string, redirect *int, mode *int
 	return args
 }
 
-func HandleBgArg(args []string) (bool, []string) {
-	if len(args) > 0 && args[len(args)-1] == "&" {
-		return true, args[:len(args)-1]
+// checks whether the command runs in the background.
+// "&" applies to the entire command, not to one pipeline segment,
+// so only the last segment can carry it
+func CheckBgComm(comms []string) bool {
+	if len(comms) == 0 {
+		return false
 	}
-	return false, args
+
+	_, args := GetComm(comms[len(comms)-1])
+
+	return len(args) > 0 && args[len(args)-1] == "&"
+}
+
+// removes the "&" that marks a background command,
+// so that the shell does not pass it to the binary
+func HandleArgs(args []string) []string {
+	if len(args) > 0 && args[len(args)-1] == "&" {
+		return args[:len(args)-1]
+	}
+	return args
 }
 
 // switches terminal from cooked to raw mode

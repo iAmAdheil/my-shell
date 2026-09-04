@@ -53,27 +53,15 @@ func main() {
 
 		comms := GetComms(txt)
 
+		// "&" applies to the entire command, not to one pipeline segment
+		isBg := CheckBgComm(comms)
+
 		var in io.Reader = nil
 		var running []*com.Com
 
 		for i, _ := range comms {
 			ct := comms[i]
 			main, args := GetComm(ct) // normalise args, and extract main query
-
-			pr, pw, err := os.Pipe()
-			if err != nil {
-				panic(err)
-			}
-
-			var (
-				out   io.WriteCloser = pw
-				close bool           = true
-			)
-			// last command prints to terminal
-			if i == len(comms)-1 {
-				out = os.Stdout
-				close = false
-			}
 
 			var (
 				outFilePath string // output file path
@@ -89,7 +77,32 @@ func main() {
 
 			// filter out args without the redirect args
 			args = RedirectFilter(args, &outFilePath, &redirect, &mode)
-			isBg, args := HandleBgArg(args)
+			args = HandleArgs(args)
+
+			pr, pw, err := os.Pipe()
+			if err != nil {
+				panic(err)
+			}
+
+			var (
+				out   io.WriteCloser = pw
+				close bool           = true
+			)
+
+			// the first command of a pipeline has no pipe to read from.
+			// give it the terminal, so a program can ask for input
+			// during execution (for example "y/n" or a password).
+			// a background command must not read from the terminal,
+			// because the prompt reads from the terminal at the same time.
+			if i == 0 && !isBg {
+				in = os.Stdin
+			}
+
+			// last command prints to terminal
+			if i == len(comms)-1 {
+				out = os.Stdout
+				close = false
+			}
 
 			c := &com.Com{
 				Main:        main,
@@ -101,7 +114,8 @@ func main() {
 				Redirect:    redirect,
 				Mode:        mode,
 				Close:       close,
-				IsBgProc:    isBg,
+				// the job records the last process of the pipeline
+				IsBgProc: isBg && i == len(comms)-1,
 			}
 
 			c.Run()
