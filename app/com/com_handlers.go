@@ -143,7 +143,7 @@ func (com *Com) HandleEcho() error {
 
 	var txt string
 
-	if com.Args[0] == "-e" {
+	if len(com.Args) > 0 && com.Args[0] == "-e" {
 		txt = strings.Join(com.Args[1:], " ")
 		txt = strings.ReplaceAll(txt, `\n`, "\n")
 	} else {
